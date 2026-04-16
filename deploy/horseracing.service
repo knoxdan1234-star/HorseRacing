@@ -1,0 +1,29 @@
+[Unit]
+Description=HKJC + Macau Horse Racing Prediction System
+After=network.target
+
+[Service]
+Type=simple
+User=horseracing
+Group=horseracing
+WorkingDirectory=/home/horseracing/app
+Environment=PATH=/home/horseracing/app/venv/bin:/usr/bin
+ExecStart=/home/horseracing/app/venv/bin/python main.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=horseracing
+
+# Resource limits for KVM2 (2 CPU / 8GB)
+CPUQuota=150%
+MemoryMax=6G
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/horseracing/app/data /home/horseracing/app/models /home/horseracing/app/output
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
