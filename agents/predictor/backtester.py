@@ -86,6 +86,11 @@ class Backtester:
         test_window_months: int = 1,
         model_type: str = "lightgbm",
         bankroll: float = 10000.0,
+        edge_margin: float = 0.15,
+        min_odds: float = 2.5,
+        max_odds: float = 20.0,
+        top_rank_only: int | None = 3,
+        kelly_fraction: float | None = None,
     ) -> tuple[list[BacktestPeriod], BacktestMetrics]:
         """
         Run walk-forward backtest.
@@ -103,6 +108,12 @@ class Backtester:
         )
 
         self.bet_sizer.update_bankroll(bankroll)
+        if kelly_fraction is not None:
+            self.bet_sizer.kelly_fraction = kelly_fraction
+        self._edge_margin = edge_margin
+        self._min_odds = min_odds
+        self._max_odds = max_odds
+        self._top_rank_only = top_rank_only
         periods = []
         current_test_start = start_date
 
@@ -184,6 +195,10 @@ class Backtester:
             win_probs = model.predict_proba(X)[:, 1]
             win_probs_norm = win_probs / win_probs.sum()
 
+            # Rank horses by model probability (for top_rank_only filter)
+            ranked_idx = np.argsort(-win_probs_norm)
+            top_rank_set = set(ranked_idx[: self._top_rank_only]) if self._top_rank_only else None
+
             # Find value bets
             for i, (_, row) in enumerate(df.iterrows()):
                 horse_no = int(row["horse_no"])
@@ -193,10 +208,18 @@ class Backtester:
                 if win_odds <= 1:
                     continue
 
-                implied_prob = 1.0 / win_odds
-                edge = model_prob - implied_prob
+                # Filter: odds range (skip chalk and longshots)
+                if win_odds < self._min_odds or win_odds > self._max_odds:
+                    continue
 
-                if edge > 0.05:  # Value bet threshold
+                # Filter: only bet on top-N ranked horses
+                if top_rank_set is not None and i not in top_rank_set:
+                    continue
+
+                implied_prob = 1.0 / win_odds
+
+                # Multiplicative edge threshold (margin of safety)
+                if model_prob > implied_prob * (1 + self._edge_margin):
                     bet_amount = self.bet_sizer.size_bet(model_prob, win_odds, "WIN")
                     if bet_amount > 0:
                         # Settle against actual results

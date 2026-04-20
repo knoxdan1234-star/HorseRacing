@@ -81,43 +81,54 @@ class DiscordWebhook:
         value_bets: list[dict],
     ) -> bool:
         """
-        Send prediction embed for a race.
+        Send prediction embed for a race (Traditional Chinese).
 
         race_info: {race_no, racecourse, class, distance, track_type, going, field_size}
         predictions: [{horse_no, horse_name, jockey, trainer, win_prob, odds, win_rank}]
         value_bets: [{horse_no, bet_type, bet_amount, edge, odds}]
         """
-        course_name = {"ST": "Sha Tin", "HV": "Happy Valley", "MJC": "Macau"}.get(
+        course_name = {"ST": "沙田", "HV": "跑馬地", "MJC": "澳門"}.get(
             race_info.get("racecourse", ""), race_info.get("racecourse", "")
         )
+        track_name = {"Turf": "草地", "AWT": "全天候跑道", "Dirt": "泥地"}.get(
+            race_info.get("track_type", ""), race_info.get("track_type", "")
+        )
+        going_map = {
+            "Good": "好地", "Good to Firm": "好至快",
+            "Good to Yielding": "好至黏", "Yielding": "黏地",
+            "Soft": "軟地", "Wet Fast": "濕快", "Wet Slow": "濕慢",
+            "Heavy": "大爛",
+        }
+        going = going_map.get(race_info.get("going", ""), race_info.get("going", "未知"))
 
-        title = f"Race {race_info.get('race_no', '?')} | {race_info.get('class', '')} - {race_info.get('distance', '')}m {race_info.get('track_type', '')} - {course_name}"
+        title = (
+            f"第{race_info.get('race_no', '?')}場 | "
+            f"{race_info.get('class', '')} - "
+            f"{race_info.get('distance', '')}米 {track_name} - {course_name}"
+        )
 
-        # Description with race details
-        desc = f"Going: {race_info.get('going', 'N/A')} | Field: {race_info.get('field_size', '?')} runners"
+        desc = f"場地狀況: {going} | 出賽馬匹: {race_info.get('field_size', '?')} 匹"
 
-        # Top picks
         fields = []
         top_preds = sorted(predictions, key=lambda p: p.get("win_rank", 99))[:5]
 
         for i, pred in enumerate(top_preds, 1):
             horse_no = pred.get("horse_no", "?")
-            name = pred.get("horse_name", "Unknown")
+            name = pred.get("horse_name", "未知")
             jockey = pred.get("jockey", "")
             trainer = pred.get("trainer", "")
             prob = pred.get("win_prob", 0)
             odds = pred.get("odds", 0)
 
-            # Check if value bet
             vb = next((b for b in value_bets if b.get("horse_no") == horse_no), None)
-            value_tag = " | VALUE BET" if vb else ""
-            bet_info = f"\nKelly Bet: ${vb['bet_amount']:.0f}" if vb and vb.get("bet_amount", 0) > 0 else ""
+            value_tag = " | 💎 有價值投注" if vb else ""
+            bet_info = f"\n建議投注: HK${vb['bet_amount']:.0f}" if vb and vb.get("bet_amount", 0) > 0 else ""
 
             fields.append({
                 "name": f"{i}. #{horse_no} {name}",
                 "value": (
-                    f"J: {jockey} | T: {trainer}\n"
-                    f"Win Prob: {prob:.1%} | Odds: {odds}{value_tag}{bet_info}"
+                    f"騎師: {jockey} | 練馬師: {trainer}\n"
+                    f"頭馬機率: {prob:.1%} | 賠率: {odds}{value_tag}{bet_info}"
                 ),
                 "inline": False,
             })
@@ -126,7 +137,7 @@ class DiscordWebhook:
             title=title,
             description=desc,
             fields=fields,
-            color=3066993,  # Green
+            color=3066993,
         )
 
     def send_race_result(
@@ -135,64 +146,75 @@ class DiscordWebhook:
         bet_results: list[dict],
         meeting_pnl: float,
     ) -> bool:
-        """Send post-race result summary."""
-        title = f"Results: R{race_info.get('race_no', '?')} {race_info.get('racecourse', '')}"
+        """Send post-race result summary (Traditional Chinese)."""
+        course_name = {"ST": "沙田", "HV": "跑馬地", "MJC": "澳門"}.get(
+            race_info.get("racecourse", ""), race_info.get("racecourse", "")
+        )
+        title = f"賽果: 第{race_info.get('race_no', '?')}場 {course_name}"
+
+        bet_type_map = {"WIN": "獨贏", "PLA": "位置", "QIN": "連贏",
+                        "QPL": "位置Q", "FCT": "單T", "TCE": "三T"}
 
         fields = []
         for result in bet_results:
-            status = "WON" if result.get("pnl", 0) > 0 else "LOST"
             pnl = result.get("pnl", 0)
+            status = "✅ 中" if pnl > 0 else "❌ 失"
+            bet_type_tc = bet_type_map.get(result.get("bet_type", "WIN"), result.get("bet_type", ""))
             fields.append({
-                "name": f"#{result.get('horse_no', '?')} ({result.get('bet_type', 'WIN')})",
-                "value": f"{status} | P&L: ${pnl:+.2f} | Pos: {result.get('position', '?')}",
+                "name": f"#{result.get('horse_no', '?')} ({bet_type_tc})",
+                "value": f"{status} | 盈虧: HK${pnl:+.2f} | 名次: {result.get('position', '?')}",
                 "inline": True,
             })
 
-        color = 3066993 if meeting_pnl >= 0 else 15158332  # Green if profit, red if loss
+        color = 3066993 if meeting_pnl >= 0 else 15158332
 
         return self.send_embed(
             title=title,
-            description=f"Meeting P&L so far: ${meeting_pnl:+.2f}",
+            description=f"本場日累積盈虧: HK${meeting_pnl:+.2f}",
             fields=fields,
             color=color,
         )
 
     def send_weekly_pnl(self, pnl_data) -> bool:
-        """Send weekly P&L summary (Monday report)."""
+        """Send weekly P&L summary (Monday report, Traditional Chinese)."""
         color = 3066993 if pnl_data.net_pnl >= 0 else 15158332
 
         fields = [
-            {"name": "Period", "value": f"{pnl_data.week_start} to {pnl_data.week_end}", "inline": False},
-            {"name": "Meetings", "value": str(pnl_data.num_meetings), "inline": True},
-            {"name": "Total Bets", "value": str(pnl_data.num_bets), "inline": True},
-            {"name": "Won", "value": str(pnl_data.num_wins), "inline": True},
-            {"name": "Gross Profit", "value": f"${pnl_data.gross_profit:+,.2f}", "inline": True},
-            {"name": "Gross Loss", "value": f"${pnl_data.gross_loss:,.2f}", "inline": True},
-            {"name": "Net P&L", "value": f"${pnl_data.net_pnl:+,.2f} ({pnl_data.roi_pct:+.1f}%)", "inline": True},
-            {"name": "Best Bet", "value": pnl_data.best_bet, "inline": False},
-            {"name": "Worst Bet", "value": pnl_data.worst_bet, "inline": False},
-            {"name": "Season Total P&L", "value": f"${pnl_data.season_total_pnl:+,.2f}", "inline": True},
-            {"name": "Current Bankroll", "value": f"${pnl_data.current_bankroll:,.2f}", "inline": True},
+            {"name": "報告期間", "value": f"{pnl_data.week_start} 至 {pnl_data.week_end}", "inline": False},
+            {"name": "賽馬日數", "value": str(pnl_data.num_meetings), "inline": True},
+            {"name": "投注次數", "value": str(pnl_data.num_bets), "inline": True},
+            {"name": "中注次數", "value": str(pnl_data.num_wins), "inline": True},
+            {"name": "毛利", "value": f"HK${pnl_data.gross_profit:+,.2f}", "inline": True},
+            {"name": "毛損", "value": f"HK${pnl_data.gross_loss:,.2f}", "inline": True},
+            {"name": "淨盈虧", "value": f"HK${pnl_data.net_pnl:+,.2f} ({pnl_data.roi_pct:+.1f}%)", "inline": True},
+            {"name": "🏆 最佳一注", "value": pnl_data.best_bet, "inline": False},
+            {"name": "💔 最差一注", "value": pnl_data.worst_bet, "inline": False},
+            {"name": "季度總盈虧", "value": f"HK${pnl_data.season_total_pnl:+,.2f}", "inline": True},
+            {"name": "目前本金", "value": f"HK${pnl_data.current_bankroll:,.2f}", "inline": True},
         ]
 
         return self.send_embed(
-            title="Weekly P&L Report",
-            description="Monday Summary",
+            title="每週盈虧報告",
+            description="星期一總結",
             fields=fields,
             color=color,
             url=self.pnl_webhook_url,
         )
 
     def send_alert(self, severity: str, message: str) -> bool:
-        """Send a system alert."""
+        """Send a system alert (Traditional Chinese)."""
         color_map = {
             "INFO": 3447003,
             "WARNING": 16776960,
             "ERROR": 16744448,
             "CRITICAL": 16711680,
         }
+        severity_tc = {
+            "INFO": "資訊", "WARNING": "警告",
+            "ERROR": "錯誤", "CRITICAL": "嚴重",
+        }.get(severity, severity)
         return self.send_embed(
-            title=f"System Alert [{severity}]",
+            title=f"系統警示 [{severity_tc}]",
             description=message,
             color=color_map.get(severity, 3447003),
         )

@@ -455,13 +455,13 @@ class Orchestrator:
             train_start = today - timedelta(days=730)
 
             # Train win model
-            model, metadata = trainer.train_win_model(train_start, today, "lightgbm")
+            model, metadata = trainer.train_win_model(train_start, today, self.settings.PRIMARY_MODEL)
             if model:
                 version = trainer.save_model(model, metadata)
                 logger.info("Win model retrained: %s (AUC: %.4f)", version, metadata.get("validation_auc", 0))
 
             # Train place model
-            model, metadata = trainer.train_place_model(train_start, today, "lightgbm")
+            model, metadata = trainer.train_place_model(train_start, today, self.settings.PRIMARY_MODEL)
             if model:
                 version = trainer.save_model(model, metadata)
                 logger.info("Place model retrained: %s", version)

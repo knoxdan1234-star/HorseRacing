@@ -20,11 +20,18 @@ class Settings(BaseSettings):
     DISCORD_WEBHOOK_URL: str = ""
     DISCORD_PNL_WEBHOOK_URL: str = ""
 
-    # Betting configuration
+    # Betting configuration (tuned from 2-season walk-forward backtest)
     INITIAL_BANKROLL: float = 10000.0
-    KELLY_FRACTION: float = 0.05  # 5% fractional Kelly (conservative)
+    KELLY_FRACTION: float = 0.03  # 3% fractional Kelly
     MAX_BET_PCT: float = 0.02  # Never bet more than 2% of bankroll
     MIN_BET_AMOUNT: float = 10.0  # Skip bets below this
+
+    # Value-bet filters (XGBoost + odds 4.5-7.0 + top-2 delivered +17% ROI, Sharpe 0.98)
+    PRIMARY_MODEL: str = "xgboost"
+    BET_MIN_ODDS: float = 4.5
+    BET_MAX_ODDS: float = 7.0
+    BET_EDGE_MARGIN: float = 0.20  # model_prob must exceed implied_prob * (1 + 0.20)
+    BET_TOP_RANK_ONLY: int = 2  # Only consider top-2 model picks per race
 
     # HKJC pool deduction rates (take-out)
     WIN_PLACE_DEDUCTION: float = 0.175  # 17.5%

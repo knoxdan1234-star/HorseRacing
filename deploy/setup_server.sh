@@ -20,12 +20,13 @@ apt update && apt upgrade -y
 # 2. Install dependencies
 echo "[2/8] Installing system dependencies..."
 apt install -y \
-    python3.11 \
-    python3.11-venv \
+    python3.12 \
+    python3.12-venv \
     python3-pip \
     git \
     chromium-browser \
-    chromium-chromedriver
+    chromium-chromedriver \
+    sqlite3
 
 # 3. Create application user
 echo "[3/8] Creating application user..."
@@ -48,7 +49,7 @@ fi
 # 5. Create virtual environment and install dependencies
 echo "[5/8] Setting up Python environment..."
 cd "$APP_DIR"
-python3.11 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
@@ -87,8 +88,11 @@ echo "============================================"
 echo ""
 echo "Next steps:"
 echo "  1. Edit .env:           nano $APP_DIR/.env"
-echo "  2. Bootstrap data:      su - $APP_USER -c 'cd $APP_DIR && source venv/bin/activate && python scripts/bootstrap_historical.py --seasons 3'"
-echo "  3. Run backtest:        su - $APP_USER -c 'cd $APP_DIR && source venv/bin/activate && python scripts/run_backtest.py'"
-echo "  4. Start service:       systemctl start horseracing"
-echo "  5. Check logs:          journalctl -u horseracing -f"
+echo "     (set DISCORD_WEBHOOK_URL and confirm KELLY_FRACTION=0.03)"
+echo "  2. Upload SQLite DB:    scp data/horseracing.db root@server:$APP_DIR/data/"
+echo "     (already bootstrapped locally — faster than re-scraping 2 seasons)"
+echo "  3. Upload trained models: scp models/xgboost_*.joblib root@server:$APP_DIR/models/"
+echo "  4. Sanity check:        su - $APP_USER -c 'cd $APP_DIR && source venv/bin/activate && python scripts/run_backtest.py'"
+echo "  5. Start service:       systemctl start horseracing"
+echo "  6. Check logs:          journalctl -u horseracing -f"
 echo ""

@@ -44,5 +44,11 @@ Thumbs.db
 *.log
 logs/
 
+# Local backtest outputs (regenerable)
+output/backtests/
+
+# Claude Code workspace files
+.claude/
+
 # Jupyter
 .ipynb_checkpoints/
