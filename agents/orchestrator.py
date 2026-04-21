@@ -181,6 +181,11 @@ class Orchestrator:
                 cards = scraper.scrape_meeting_card(today, course)
                 if cards:
                     logger.info("Got %d race cards for %s at %s", len(cards), today, course)
+                    stored = 0
+                    for card in cards:
+                        if cleaner.store_racecard(card):
+                            stored += 1
+                    logger.info("Persisted %d/%d racecards to DB", stored, len(cards))
                     break
 
             session.close()

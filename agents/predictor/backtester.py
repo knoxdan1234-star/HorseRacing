@@ -184,6 +184,14 @@ class Backtester:
         feature_cols = FeatureEngineer.get_feature_columns()
 
         for race in test_races:
+            # Distance exclusion filter (1400-1599m bled money, validated OOS)
+            if race.distance and (
+                settings.BET_EXCLUDE_DISTANCE_MIN
+                <= race.distance
+                <= settings.BET_EXCLUDE_DISTANCE_MAX
+            ):
+                continue
+
             # Build features
             df = self.feature_engine.build_features_for_race(race.id)
             if df.empty:

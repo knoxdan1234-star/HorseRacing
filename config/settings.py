@@ -30,11 +30,18 @@ class Settings(BaseSettings):
     # - 4.5-5.5: +26% ROI in-sample, +11% ROI out-of-sample (Jan-Apr 2026)
     # - 5.5-6.5: loses money in-sample (-16%) — exclude
     # Narrowed BET_MAX_ODDS from 7.0 to 5.5 after OOS validation.
+    # Distance filter: 1400-1599m bled money in-sample AND OOS. Exclude.
     PRIMARY_MODEL: str = "xgboost"
     BET_MIN_ODDS: float = 4.5
     BET_MAX_ODDS: float = 5.5
     BET_EDGE_MARGIN: float = 0.20  # model_prob must exceed implied_prob * (1 + 0.20)
     BET_TOP_RANK_ONLY: int = 2  # Only consider top-2 model picks per race
+    BET_EXCLUDE_DISTANCE_MIN: int = 1400  # Exclude mid-distance races
+    BET_EXCLUDE_DISTANCE_MAX: int = 1599
+
+    # Shadow mode: record predictions + simulated bets but DO NOT place real bets.
+    # Use this to validate live performance before risking real money.
+    SHADOW_MODE: bool = True
 
     # HKJC pool deduction rates (take-out)
     WIN_PLACE_DEDUCTION: float = 0.175  # 17.5%

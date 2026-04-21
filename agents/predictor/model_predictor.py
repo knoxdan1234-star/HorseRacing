@@ -102,12 +102,22 @@ class Predictor:
           - Odds band [BET_MIN_ODDS, BET_MAX_ODDS]
           - Multiplicative edge: model_prob > implied_prob * (1 + BET_EDGE_MARGIN)
           - Only top-BET_TOP_RANK_ONLY model picks per race
+          - Excludes distance band [BET_EXCLUDE_DISTANCE_MIN, MAX]
 
-        Backtest (2-season, XGBoost, odds 4.5-7.0, edge 20%, top-2, Kelly 0.03):
-          +17% ROI, Sharpe 0.98, MaxDD 31.7% over 224 bets.
+        Backtest (2.5-year walk-forward, xgboost, odds 4.5-5.5, edge 20%, top-2, Kelly 0.03):
+          141 bets, +8.7% ROI, 20.6% win rate, 8.7% MaxDD, Sharpe 0.57.
         """
         predictions = self.predict_race(race_id)
         if predictions.empty:
+            return []
+
+        # Distance filter — a pre-race exclusion, applies to the whole race.
+        from db.models import Race
+        race = self.session.query(Race).filter_by(id=race_id).first()
+        if race and race.distance and (
+            settings.BET_EXCLUDE_DISTANCE_MIN <= race.distance <= settings.BET_EXCLUDE_DISTANCE_MAX
+        ):
+            logger.info("Race %d distance %dm in exclude band — no value bets", race_id, race.distance)
             return []
 
         value_bets = []

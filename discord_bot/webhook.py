@@ -107,7 +107,11 @@ class DiscordWebhook:
             f"{race_info.get('distance', '')}米 {track_name} - {course_name}"
         )
 
-        desc = f"場地狀況: {going} | 出賽馬匹: {race_info.get('field_size', '?')} 匹"
+        shadow_banner = "🟡 **觀察模式 (SHADOW MODE) — 請勿實際下注**\n" if settings.SHADOW_MODE else ""
+        desc = (
+            f"{shadow_banner}"
+            f"場地狀況: {going} | 出賽馬匹: {race_info.get('field_size', '?')} 匹"
+        )
 
         fields = []
         top_preds = sorted(predictions, key=lambda p: p.get("win_rank", 99))[:5]

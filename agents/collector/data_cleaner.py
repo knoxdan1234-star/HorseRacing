@@ -146,6 +146,76 @@ class DataCleaner:
             logger.error("Failed to store race: %s", e)
             return None
 
+    def store_racecard(self, card) -> Race | None:
+        """
+        Store a scraped RaceCardInfo (pre-race declarations) into the database.
+        Unlike store_race_result, this creates a Race row before the race has run
+        — finish_position, dividends etc. are populated later by store_race_result.
+
+        Returns the Race ORM object, or None if invalid.
+        """
+        from agents.collector.hkjc.scraper_racecard import RaceCardInfo
+
+        if not isinstance(card, RaceCardInfo):
+            logger.error("Invalid racecard type: %s", type(card))
+            return None
+        if not card.entries:
+            logger.warning(
+                "Skipping racecard with no entries: %s R%d", card.race_date, card.race_no
+            )
+            return None
+
+        existing = (
+            self.session.query(Race)
+            .filter_by(
+                race_date=card.race_date,
+                racecourse=normalize_racecourse(card.racecourse),
+                race_no=card.race_no,
+            )
+            .first()
+        )
+        if existing:
+            logger.debug(
+                "Racecard already stored: %s %s R%d",
+                card.race_date, card.racecourse, card.race_no,
+            )
+            return existing
+
+        race = Race(
+            race_date=card.race_date,
+            racecourse=normalize_racecourse(card.racecourse),
+            race_no=card.race_no,
+            race_class=card.race_class or None,
+            distance=card.distance,
+            track_type=card.track_type or None,
+            course_variant=card.course_variant or None,
+            going=normalize_going(card.going) if card.going else None,
+            prize=card.prize,
+            race_name=card.race_name or None,
+            field_size=len(card.entries),
+            source="hkjc",
+            season=get_season(card.race_date),
+        )
+        self.session.add(race)
+        self.session.flush()
+
+        for entry in card.entries:
+            runner = self._create_runner(race, entry)
+            if runner:
+                self.session.add(runner)
+
+        try:
+            self.session.commit()
+            logger.info(
+                "Stored racecard: %s %s R%d (%d entries)",
+                race.race_date, race.racecourse, race.race_no, len(card.entries),
+            )
+            return race
+        except Exception as e:
+            self.session.rollback()
+            logger.error("Failed to store racecard: %s", e)
+            return None
+
     def _is_scratched(self, runner_data) -> bool:
         """Check if a runner was scratched/withdrawn."""
         if hasattr(runner_data, "finish_position"):
