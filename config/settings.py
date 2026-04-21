@@ -26,10 +26,13 @@ class Settings(BaseSettings):
     MAX_BET_PCT: float = 0.02  # Never bet more than 2% of bankroll
     MIN_BET_AMOUNT: float = 10.0  # Skip bets below this
 
-    # Value-bet filters (XGBoost + odds 4.5-7.0 + top-2 delivered +17% ROI, Sharpe 0.98)
+    # Value-bet filters. Sliced the 2.5-year walk-forward output by odds:
+    # - 4.5-5.5: +26% ROI in-sample, +11% ROI out-of-sample (Jan-Apr 2026)
+    # - 5.5-6.5: loses money in-sample (-16%) — exclude
+    # Narrowed BET_MAX_ODDS from 7.0 to 5.5 after OOS validation.
     PRIMARY_MODEL: str = "xgboost"
     BET_MIN_ODDS: float = 4.5
-    BET_MAX_ODDS: float = 7.0
+    BET_MAX_ODDS: float = 5.5
     BET_EDGE_MARGIN: float = 0.20  # model_prob must exceed implied_prob * (1 + 0.20)
     BET_TOP_RANK_ONLY: int = 2  # Only consider top-2 model picks per race
 
