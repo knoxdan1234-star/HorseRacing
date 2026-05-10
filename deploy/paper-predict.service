@@ -1,0 +1,14 @@
+[Unit]
+Description=HKJC paper-trade predict (Class 4 ranker)
+After=network.target
+
+[Service]
+Type=oneshot
+User=horseracing
+Group=horseracing
+WorkingDirectory=/home/horseracing/app
+Environment=PATH=/home/horseracing/app/venv/bin:/usr/bin
+ExecStart=/home/horseracing/app/venv/bin/python scripts/paper_trade.py predict --date %i
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=paper-predict

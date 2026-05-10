@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily HKJC paper-trade predict at 09:00 HKT
+
+[Timer]
+OnCalendar=*-*-* 09:00:00 Asia/Hong_Kong
+Persistent=true
+Unit=paper-predict-today.service
+
+[Install]
+WantedBy=timers.target

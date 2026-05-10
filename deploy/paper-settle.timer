@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily HKJC paper-trade settle at 23:30 HKT
+
+[Timer]
+OnCalendar=*-*-* 23:30:00 Asia/Hong_Kong
+Persistent=true
+Unit=paper-settle.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Run HKJC paper-trade settle through today
+After=network.target
+
+[Service]
+Type=oneshot
+User=horseracing
+Group=horseracing
+WorkingDirectory=/home/horseracing/app
+Environment=PATH=/home/horseracing/app/venv/bin:/usr/bin
+ExecStart=/bin/bash -c '/home/horseracing/app/venv/bin/python scripts/paper_trade.py settle --through $(TZ=Asia/Hong_Kong date +%%Y-%%m-%%d)'
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=paper-settle
