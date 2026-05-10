@@ -35,6 +35,15 @@ def main():
     parser.add_argument("--max-odds", type=float, default=settings.BET_MAX_ODDS)
     parser.add_argument("--top-rank", type=int, default=settings.BET_TOP_RANK_ONLY)
     parser.add_argument("--kelly", type=float, default=settings.KELLY_FRACTION)
+    parser.add_argument("--max-bet-pct", type=float, default=None, help="Per-bet bankroll cap (e.g. 0.01 = 1%)")
+    parser.add_argument("--bet-type", type=str, default="WIN", choices=["WIN", "PLA"], help="Pool to bet (WIN or PLA)")
+    parser.add_argument(
+        "--model-kind",
+        type=str,
+        default="classifier",
+        choices=["classifier", "calibrated", "ranker"],
+        help="classifier=baseline, calibrated=isotonic+no scale_pos_weight, ranker=LambdaRank",
+    )
     args = parser.parse_args()
 
     setup_logging(settings)
@@ -58,6 +67,9 @@ def main():
         max_odds=args.max_odds,
         top_rank_only=args.top_rank,
         kelly_fraction=args.kelly,
+        max_bet_pct=args.max_bet_pct,
+        model_kind=args.model_kind,
+        bet_type=args.bet_type,
     )
 
     backtester.print_summary(metrics)

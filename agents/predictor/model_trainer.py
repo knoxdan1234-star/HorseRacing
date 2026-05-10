@@ -14,6 +14,7 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import xgboost as xgb
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.metrics import log_loss, roc_auc_score
 from sklearn.model_selection import TimeSeriesSplit
 from sqlalchemy.orm import Session
@@ -77,6 +78,7 @@ class ModelTrainer:
         train_start: date,
         train_end: date,
         model_type: str = "lightgbm",
+        calibrate: bool = False,
     ) -> tuple[object, dict]:
         """
         Train a binary win prediction model.
@@ -132,26 +134,43 @@ class ModelTrainer:
             val_scores.append({"auc": auc, "logloss": logloss})
             logger.info("Fold %d: AUC=%.4f, LogLoss=%.4f", fold + 1, auc, logloss)
 
-        # Train final model on all data
-        if model_type == "lightgbm":
-            final_model = lgb.LGBMClassifier(**self.LGBM_PARAMS)
+        # Train final model on all data.
+        # Calibration drops scale_pos_weight (which inflates probabilities and
+        # breaks Kelly sizing) and wraps the base estimator in isotonic
+        # regression so predict_proba reflects empirical frequencies.
+        if calibrate:
+            base_params = {
+                k: v for k, v in (
+                    self.LGBM_PARAMS if model_type == "lightgbm" else self.XGB_PARAMS
+                ).items() if k != "scale_pos_weight"
+            }
+            base_estimator = (
+                lgb.LGBMClassifier(**base_params)
+                if model_type == "lightgbm"
+                else xgb.XGBClassifier(**base_params)
+            )
+            final_model = CalibratedClassifierCV(
+                base_estimator, method="isotonic", cv=3
+            )
+            final_model.fit(X, y)
+            importance = {}  # not exposed on the calibrated wrapper
         else:
-            final_model = xgb.XGBClassifier(**self.XGB_PARAMS)
-
-        final_model.fit(X, y)
-
-        # Feature importance
-        importance = dict(zip(
-            self.feature_cols,
-            final_model.feature_importances_.tolist(),
-        ))
+            if model_type == "lightgbm":
+                final_model = lgb.LGBMClassifier(**self.LGBM_PARAMS)
+            else:
+                final_model = xgb.XGBClassifier(**self.XGB_PARAMS)
+            final_model.fit(X, y)
+            importance = dict(zip(
+                self.feature_cols,
+                final_model.feature_importances_.tolist(),
+            ))
 
         # Average validation scores
         avg_auc = np.mean([s["auc"] for s in val_scores])
         avg_logloss = np.mean([s["logloss"] for s in val_scores])
 
         metadata = {
-            "model_type": model_type,
+            "model_type": f"{model_type}_calibrated" if calibrate else model_type,
             "target": "win",
             "training_races_count": df["race_id"].nunique(),
             "training_runners_count": len(df),
@@ -160,14 +179,78 @@ class ModelTrainer:
             "validation_logloss": avg_logloss,
             "feature_importance": importance,
             "hyperparams": self.LGBM_PARAMS if model_type == "lightgbm" else self.XGB_PARAMS,
+            "calibrated": calibrate,
         }
 
         logger.info(
-            "Training complete: AUC=%.4f, LogLoss=%.4f (%d races)",
-            avg_auc, avg_logloss, metadata["training_races_count"],
+            "Training complete: AUC=%.4f, LogLoss=%.4f (%d races, calibrated=%s)",
+            avg_auc, avg_logloss, metadata["training_races_count"], calibrate,
         )
 
         return final_model, metadata
+
+    def train_win_ranker(
+        self,
+        train_start: date,
+        train_end: date,
+    ) -> tuple[object, dict]:
+        """
+        Train a LambdaRank model that learns to rank horses within a race.
+
+        Output is a per-runner score; convert to per-race probabilities via
+        softmax over the runners in each race (done at prediction time).
+        """
+        logger.info("Training lightgbm ranker on %s to %s", train_start, train_end)
+
+        df = self.feature_engine.build_features_for_date_range(train_start, train_end)
+        if df.empty:
+            return None, {}
+
+        df = df[df["finish_position"].notna() & (df["finish_position"] > 0)]
+        # Group rows must be contiguous per race for LightGBM ranking
+        df = df.sort_values(["race_id"]).reset_index(drop=True)
+
+        X = df[self.feature_cols].copy().fillna(df[self.feature_cols].median())
+        y = df["is_winner"].values
+        group = df.groupby("race_id", sort=False).size().values
+
+        ranker = lgb.LGBMRanker(
+            objective="lambdarank",
+            metric="ndcg",
+            ndcg_eval_at=[1, 3],
+            n_estimators=500,
+            learning_rate=0.05,
+            num_leaves=63,
+            max_depth=8,
+            min_child_samples=50,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            reg_alpha=0.1,
+            reg_lambda=1.0,
+            verbose=-1,
+            n_jobs=-1,
+            random_state=42,
+        )
+        ranker.fit(X, y, group=group)
+
+        importance = dict(zip(
+            self.feature_cols, ranker.feature_importances_.tolist()
+        ))
+
+        metadata = {
+            "model_type": "lightgbm_ranker",
+            "target": "win_rank",
+            "training_races_count": df["race_id"].nunique(),
+            "training_runners_count": len(df),
+            "training_date_range": f"{train_start} to {train_end}",
+            "feature_importance": importance,
+        }
+
+        logger.info(
+            "Ranker training complete: %d races, %d runners",
+            metadata["training_races_count"], metadata["training_runners_count"],
+        )
+        return ranker, metadata
 
     def train_place_model(
         self,

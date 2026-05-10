@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>賽馬完全入門指南</title>
+<style>
+@page { size: A4; margin: 20mm 18mm; }
+html { font-size: 11pt; }
+body {
+  font-family: "PingFang TC", "Heiti TC", "Hiragino Sans CNS",
+               "Noto Sans CJK TC", "Microsoft JhengHei", sans-serif;
+  line-height: 1.75;
+  color: #222;
+  max-width: 760px;
+  margin: 0 auto;
+}
+h1 { font-size: 26pt; border-bottom: 3px solid #b22222; padding-bottom: 8px; color: #b22222; }
+h2 { font-size: 18pt; border-bottom: 1px solid #888; padding-bottom: 4px; margin-top: 2em; color: #333; }
+h3 { font-size: 14pt; margin-top: 1.5em; color: #444; }
+h4 { font-size: 12pt; margin-top: 1.2em; color: #555; }
+blockquote {
+  border-left: 4px solid #b22222;
+  background: #fdf3f3;
+  padding: 8px 14px;
+  margin: 1em 0;
+  color: #555;
+}
+code { background: #f4f4f4; padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
+pre { background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #bbb; padding: 6px 10px; text-align: left; }
+th { background: #f0f0f0; }
+hr { border: none; border-top: 1px solid #ccc; margin: 2em 0; }
+ul, ol { margin: 0.4em 0 0.8em 1.4em; }
+a { color: #b22222; text-decoration: none; }
+</style>
+</head>
+<body>
+<h1 id="賽馬完全入門指南">賽馬完全入門指南</h1>
+<blockquote>
+<p>本指南專為零基礎新手編寫，涵蓋香港及澳門賽馬的所有核心知識。</p>
+</blockquote>
+<hr />
+<h2 id="目錄">目錄</h2>
+<ol type="1">
+<li><a href="#1-賽馬基礎知識">賽馬基礎知識</a></li>
+<li><a href="#2-賽事分類">賽事分類</a></li>
+<li><a href="#3-賽馬術語">賽馬術語</a></li>
+<li><a href="#4-投注方式">投注方式</a></li>
+<li><a href="#5-彩池運作原理">彩池運作原理</a></li>
+<li><a href="#6-分析要素">分析要素</a></li>
+<li><a href="#7-投注策略入門">投注策略入門</a></li>
+</ol>
+<hr />
+<h2 id="賽馬基礎知識">1. 賽馬基礎知識</h2>
+<h3 id="香港賽馬會-hkjc-及澳門賽馬會-mjc-簡介">1.1 香港賽馬會 (HKJC) 及澳門賽馬會 (MJC) 簡介</h3>
+<p><strong>香港賽馬會（The Hong Kong Jockey Club，簡稱馬會或 HKJC）</strong> 成立於1884年，是全球投注額最高的賽馬機構之一。馬會為非牟利機構，每年將盈餘撥捐慈善。香港賽馬採用「職業賽馬」模式——所有賽駒必須在馬會註冊，由持牌練馬師管理，並由持牌騎師策騎。</p>
+<p><strong>澳門賽馬會（Macau Jockey Club，簡稱 MJC）</strong> 成立於1989年，規模較香港為小，但同樣提供完整的賽馬及投注服務。澳門賽事的競爭水平整體低於香港，但對初學者而言是了解賽馬運作的另一個窗口。</p>
+<h3 id="賽馬季節">1.2 賽馬季節</h3>
+<p>香港賽馬季節通常由每年 <strong>9月初</strong> 開始，至翌年 <strong>7月中旬</strong> 結束，整個馬季約舉行88個賽馬日，合共超過800場賽事。夏季（7月中至8月底）為休季期，馬匹在此期間進行休養及調整。</p>
+<h3 id="三個馬場">1.3 三個馬場</h3>
+<table>
+<thead>
+<tr class="header">
+<th>馬場</th>
+<th>位置</th>
+<th>跑道特色</th>
+<th>容量</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>沙田馬場 (Sha Tin)</strong></td>
+<td>新界沙田</td>
+<td>草地跑道（闊30米，周長約1900米）及全天候跑道</td>
+<td>約85,000人</td>
+</tr>
+<tr class="even">
+<td><strong>跑馬地馬場 (Happy Valley)</strong></td>
+<td>港島跑馬地</td>
+<td>草地跑道（周長約1450米），場地較窄，彎位較急</td>
+<td>約55,000人</td>
+</tr>
+<tr class="odd">
+<td><strong>澳門馬場 (Taipa Racecourse)</strong></td>
+<td>澳門氹仔</td>
+<td>草地及沙地跑道</td>
+<td>約15,000人</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>沙田馬場</strong> 是香港賽馬的主要場地，所有大型國際賽事均在此舉行。</li>
+<li><strong>跑馬地馬場</strong> 歷史悠久，主要舉辦週三晚間夜賽，氣氛獨特。</li>
+<li><strong>澳門馬場</strong> 規模最小，賽事數量及水平均較香港遜色。</li>
+</ul>
+<h3 id="賽事日程">1.4 賽事日程</h3>
+<ul>
+<li><strong>星期三晚上</strong>：跑馬地夜賽（通常19:15開始，設8至9場賽事）</li>
+<li><strong>星期六或星期日下午</strong>：沙田日賽（通常13:00開始，設10至11場賽事）</li>
+<li>部分公眾假期會加開特別賽馬日</li>
+<li>澳門賽事通常安排在與香港不衝突的日子</li>
+</ul>
+<h3 id="跑道類型">1.5 跑道類型</h3>
+<h4 id="草地跑道-turf-track">草地跑道 (Turf Track)</h4>
+<p>沙田馬場的草地跑道設有 <strong>A、B、C 三條跑道</strong>，透過移動內欄（rail）位置來使用不同跑道區域：</p>
+<table>
+<thead>
+<tr class="header">
+<th>跑道</th>
+<th>內欄位置</th>
+<th>跑道闊度影響</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>A 跑道</strong></td>
+<td>最內側（真欄）</td>
+<td>跑道最闊</td>
+<td>草地最新鮮，通常場地最公平</td>
+</tr>
+<tr class="even">
+<td><strong>B 跑道</strong></td>
+<td>向外移約3米</td>
+<td>跑道稍窄</td>
+<td>內欄草地已使用一段時間</td>
+</tr>
+<tr class="odd">
+<td><strong>C 跑道</strong></td>
+<td>向外移約7米</td>
+<td>跑道最窄</td>
+<td>通常在季末或草地受損時使用，彎位更急</td>
+</tr>
+</tbody>
+</table>
+<p>跑道選擇直接影響場地偏差（Track Bias），例如 C 跑道因彎位較急，外檔馬匹可能處於劣勢。</p>
+<h4 id="全天候跑道-all-weather-track-awt">全天候跑道 (All-Weather Track, AWT)</h4>
+<p>沙田馬場內圈設有全天候跑道，由人造纖維及沙混合而成，不受天氣影響。部分馬匹在草地表現一般，但在全天候跑道上可能判若兩馬。</p>
+<hr />
+<h2 id="賽事分類">2. 賽事分類</h2>
+<h3 id="班次制度">2.1 班次制度</h3>
+<p>香港賽馬採用嚴格的班次制度，確保同級別馬匹同場競技：</p>
+<table>
+<thead>
+<tr class="header">
+<th>班次</th>
+<th>評分範圍</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>第五班</strong></td>
+<td>0 – 40</td>
+<td>最低班次，新馬或能力較弱的馬匹</td>
+</tr>
+<tr class="even">
+<td><strong>第四班</strong></td>
+<td>41 – 60</td>
+<td>中低班次</td>
+</tr>
+<tr class="odd">
+<td><strong>第三班</strong></td>
+<td>61 – 80</td>
+<td>中班</td>
+</tr>
+<tr class="even">
+<td><strong>第二班</strong></td>
+<td>81 – 100</td>
+<td>高班，馬匹質素甚高</td>
+</tr>
+<tr class="odd">
+<td><strong>第一班</strong></td>
+<td>101+</td>
+<td>最高本地班次，僅次於分級賽</td>
+</tr>
+<tr class="even">
+<td><strong>國際三級賽 (Group 3)</strong></td>
+<td>—</td>
+<td>國際分級賽最低級別</td>
+</tr>
+<tr class="odd">
+<td><strong>國際二級賽 (Group 2)</strong></td>
+<td>—</td>
+<td>國際分級賽中級</td>
+</tr>
+<tr class="even">
+<td><strong>國際一級賽 (Group 1)</strong></td>
+<td>—</td>
+<td>最高級別，如香港盃、香港短途錦標等</td>
+</tr>
+</tbody>
+</table>
+<h3 id="評分制度">2.2 評分制度</h3>
+<ul>
+<li>每匹馬入口時獲分配一個 <strong>初始評分</strong>（通常根據其血統、來源地成績及試閘表現評定）。</li>
+<li>評分範圍一般在 <strong>0 至 120+</strong>。</li>
+<li>每場賽事完成後，評磅員（Handicapper）會根據馬匹表現調整評分：
+<ul>
+<li><strong>勝出或跑入前列</strong> → 評分上調（升分幅度視勝出距離及場次水平而定）</li>
+<li><strong>表現差劣</strong> → 評分下調</li>
+</ul></li>
+<li>評分決定馬匹所屬班次，評分升至某一門檻便會自動升班。</li>
+</ul>
+<h3 id="新馬賽-griffin-race">2.3 新馬賽 (Griffin Race)</h3>
+<p>新馬賽是專門為 <strong>從未在香港出賽的馬匹</strong> 而設的賽事。這些馬匹沒有本地往績可供參考，因此新馬賽的結果往往較難預測，但同時也可能蘊藏較高的投注價值。</p>
+<h3 id="途程">2.4 途程</h3>
+<p>香港常見的賽事途程如下：</p>
+<table>
+<thead>
+<tr class="header">
+<th>途程</th>
+<th>分類</th>
+<th>常見場地</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>1000米</strong></td>
+<td>短途</td>
+<td>沙田直路 / 沙田草地</td>
+</tr>
+<tr class="even">
+<td><strong>1200米</strong></td>
+<td>短途</td>
+<td>沙田 / 跑馬地</td>
+</tr>
+<tr class="odd">
+<td><strong>1400米</strong></td>
+<td>中短途</td>
+<td>沙田 / 跑馬地</td>
+</tr>
+<tr class="even">
+<td><strong>1600米（一哩）</strong></td>
+<td>中途</td>
+<td>沙田 / 跑馬地</td>
+</tr>
+<tr class="odd">
+<td><strong>1800米</strong></td>
+<td>中長途</td>
+<td>沙田</td>
+</tr>
+<tr class="even">
+<td><strong>2000米</strong></td>
+<td>中長途</td>
+<td>沙田</td>
+</tr>
+<tr class="odd">
+<td><strong>2200米</strong></td>
+<td>長途</td>
+<td>沙田</td>
+</tr>
+<tr class="even">
+<td><strong>2400米</strong></td>
+<td>長途</td>
+<td>沙田</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>沙田1000米為 <strong>純直路</strong> 賽事，由直路起點直衝終點，沒有彎位，檔位影響極大。</li>
+<li>跑馬地因場地較細，最長途程通常為2200米。</li>
+</ul>
+<h3 id="場地狀況-going">2.5 場地狀況 (Going)</h3>
+<p>場地狀況反映跑道表面的軟硬程度，受天氣（尤其降雨量）影響甚大：</p>
+<table>
+<thead>
+<tr class="header">
+<th>英文術語</th>
+<th>中文術語</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Good to Firm</strong></td>
+<td>好地（偏快）</td>
+<td>地面偏硬，適合快馬，時間通常較快</td>
+</tr>
+<tr class="even">
+<td><strong>Good</strong></td>
+<td>好地</td>
+<td>標準狀態，大多數馬匹均能應付</td>
+</tr>
+<tr class="odd">
+<td><strong>Good to Yielding</strong></td>
+<td>好地至黏地</td>
+<td>地面開始轉軟</td>
+</tr>
+<tr class="even">
+<td><strong>Yielding</strong></td>
+<td>黏地</td>
+<td>地面明顯轉軟，需要較大力氣</td>
+</tr>
+<tr class="odd">
+<td><strong>Yielding to Soft</strong></td>
+<td>黏地至軟地</td>
+<td>地面甚軟</td>
+</tr>
+<tr class="even">
+<td><strong>Soft</strong></td>
+<td>軟地</td>
+<td>地面非常濕軟，對後上馬及耐力型馬匹有利</td>
+</tr>
+<tr class="odd">
+<td><strong>Heavy</strong></td>
+<td>爛地</td>
+<td>極端情況，跑道積水嚴重</td>
+</tr>
+</tbody>
+</table>
+<p><strong>重要提示</strong>：部分馬匹明顯偏好某類場地。分析時務必查看馬匹在不同場地狀況下的過往表現。</p>
+<hr />
+<h2 id="賽馬術語">3. 賽馬術語</h2>
+<h3 id="檔位-draw">3.1 檔位 (Draw)</h3>
+<p>檔位指馬匹在起步閘（Starting Gate）中的位置編號。1號檔位在最內側，數字越大代表越靠外。</p>
+<p><strong>檔位的影響因素：</strong></p>
+<ul>
+<li><strong>沙田1200米</strong>：內檔通常有輕微優勢，因為馬匹較快進入彎位。</li>
+<li><strong>沙田1000米直路</strong>：無彎位，但場地偏差可能令某一側佔優（例如內欄或外欄較快）。</li>
+<li><strong>跑馬地1200米</strong>：起步後很快進入彎位，外檔馬需要消耗更多體力繞外。</li>
+<li><strong>長途賽（2000米+）</strong>：檔位影響相對減少，因為有足夠距離調整位置。</li>
+</ul>
+<h3 id="負磅-weight">3.2 負磅 (Weight)</h3>
+<ul>
+<li>每匹馬根據評分被分配不同的攜帶重量（磅數）。</li>
+<li>評分越高，負磅越重，反之越輕。</li>
+<li>負磅差距用來平衡不同評分馬匹之間的實力差距。</li>
+<li>一般經驗法則：<strong>每多1磅，約等於一個馬位的差距</strong>（但此為粗略估算）。</li>
+<li>見習騎師（Apprentice Jockey）可享有減磅優惠（通常3至10磅）。</li>
+</ul>
+<h3 id="走位-running-position">3.3 走位 (Running Position)</h3>
+<p>不同的跑法策略：</p>
+<table>
+<thead>
+<tr class="header">
+<th>走位</th>
+<th>說明</th>
+<th>適合情況</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>領放 (Front Runner)</strong></td>
+<td>從起步即佔領先位置，一路帶放</td>
+<td>場地偏利前領時；競爭步速不快時</td>
+</tr>
+<tr class="even">
+<td><strong>居前 (Prominent)</strong></td>
+<td>緊隨領放馬之後，位處前列</td>
+<td>大多數情況均可，風險較低</td>
+</tr>
+<tr class="odd">
+<td><strong>居中 (Mid-Division)</strong></td>
+<td>位處中間位置</td>
+<td>常見的保守跑法</td>
+</tr>
+<tr class="even">
+<td><strong>後上 (Hold Up / Closer)</strong></td>
+<td>在後方等候，最後直路發力追上</td>
+<td>步速快、前方馬匹互相消耗時</td>
+</tr>
+</tbody>
+</table>
+<h3 id="配備-equipment">3.4 配備 (Equipment)</h3>
+<table>
+<thead>
+<tr class="header">
+<th>配備</th>
+<th>英文</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>眼罩</strong></td>
+<td>Blinkers</td>
+<td>限制馬匹的側視範圍，令其更專注於前方</td>
+</tr>
+<tr class="even">
+<td><strong>面罩</strong></td>
+<td>Visor</td>
+<td>類似眼罩但留有側視空間，效果較溫和</td>
+</tr>
+<tr class="odd">
+<td><strong>綁舌帶</strong></td>
+<td>Tongue Tie</td>
+<td>防止馬匹在奔跑時舌頭移位阻礙呼吸</td>
+</tr>
+<tr class="even">
+<td><strong>鼻箍</strong></td>
+<td>Nose Band</td>
+<td>協助馬匹保持口部閉合，改善呼吸</td>
+</tr>
+<tr class="odd">
+<td><strong>耳塞</strong></td>
+<td>Ear Plugs</td>
+<td>減低噪音干擾，令馬匹保持冷靜</td>
+</tr>
+<tr class="even">
+<td><strong>防沙眼鏡</strong></td>
+<td>Cheek Pieces</td>
+<td>遮擋側面視線，減少馬匹被旁邊馬匹分心</td>
+</tr>
+</tbody>
+</table>
+<p><strong>配備變更</strong> 是重要的分析信號。首次加上眼罩的馬匹，表現可能會有明顯改善（或變差），值得特別留意。</p>
+<h3 id="馬身-length-behind-winner">3.5 馬身 (Length Behind Winner)</h3>
+<p>「馬身」是衡量馬匹之間距離的單位。一個馬身約等於一匹馬從頭到尾的長度（約2.4米）。</p>
+<p>常見距離單位：</p>
+<ul>
+<li><strong>短頭位 (Short Head, SH)</strong>：極短距離，約半個馬頭</li>
+<li><strong>頭位 (Head, HD)</strong>：約一個馬頭的距離</li>
+<li><strong>頸位 (Neck, NK)</strong>：約一個馬頸的距離</li>
+<li><strong>半個馬身 (Half Length, 1/2L)</strong></li>
+<li><strong>一個馬身 (1L)</strong> 及以上</li>
+</ul>
+<h3 id="排位摩擦-試閘-barrier-trial">3.6 排位摩擦 / 試閘 (Barrier Trial)</h3>
+<p>試閘是在非正式賽事中進行的模擬比賽，主要目的包括：</p>
+<ul>
+<li>測試新馬的起步及競跑能力</li>
+<li>讓傷癒復出的馬匹恢復狀態</li>
+<li>評估馬匹對新配備的反應</li>
+</ul>
+<p>試閘成績不計入正式紀錄，但對分析馬匹狀態有重要參考價值。馬會會公布試閘錄影及成績。</p>
+<hr />
+<h2 id="投注方式">4. 投注方式</h2>
+<p>以下為香港賽馬的主要投注方式及其彩池扣除率：</p>
+<h3 id="基本投注">4.1 基本投注</h3>
+<table>
+<thead>
+<tr class="header">
+<th>投注方式</th>
+<th>英文</th>
+<th>玩法說明</th>
+<th>最低投注額</th>
+<th>彩池扣除率</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>獨贏</strong></td>
+<td>Win</td>
+<td>選中第一名</td>
+<td>$10</td>
+<td>17.5%</td>
+</tr>
+<tr class="even">
+<td><strong>位置</strong></td>
+<td>Place</td>
+<td>選中前三名任何一匹（7匹或以下出馬選前二名）</td>
+<td>$10</td>
+<td>17.5%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>範例</strong>：你以 $100 投注3號馬「獨贏」，若3號馬跑第一，你便中獎。派彩金額取決於最終賠率。若賠率為5倍，你將獲得 $500（包含本金）。</p>
+<h3 id="複式投注">4.2 複式投注</h3>
+<table>
+<thead>
+<tr class="header">
+<th>投注方式</th>
+<th>英文</th>
+<th>玩法說明</th>
+<th>最低投注額</th>
+<th>彩池扣除率</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>連贏</strong></td>
+<td>Quinella</td>
+<td>選中頭兩名（不分先後）</td>
+<td>$10</td>
+<td>17.5%</td>
+</tr>
+<tr class="even">
+<td><strong>位置連贏</strong></td>
+<td>Quinella Place</td>
+<td>選兩匹馬，均須跑入前三名（不分先後）</td>
+<td>$10</td>
+<td>17.5%</td>
+</tr>
+<tr class="odd">
+<td><strong>單T / 預測</strong></td>
+<td>Forecast</td>
+<td>選中頭兩名（<strong>分先後</strong>）</td>
+<td>$10</td>
+<td>19.5%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>連贏範例</strong>：你買1號配3號連贏。若結果為1號第一、3號第二，或3號第一、1號第二，均為中獎。</p>
+<h3 id="多重複式投注">4.3 多重複式投注</h3>
+<table>
+<thead>
+<tr class="header">
+<th>投注方式</th>
+<th>英文</th>
+<th>玩法說明</th>
+<th>最低投注額</th>
+<th>彩池扣除率</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>三寶</strong></td>
+<td>Trio</td>
+<td>選中頭三名（不分先後）</td>
+<td>$10</td>
+<td>20%</td>
+</tr>
+<tr class="even">
+<td><strong>三T</strong></td>
+<td>Tierce</td>
+<td>選中頭三名（<strong>分先後</strong>）</td>
+<td>$10</td>
+<td>20%</td>
+</tr>
+<tr class="odd">
+<td><strong>四連環</strong></td>
+<td>First 4</td>
+<td>選中頭四名（不分先後）</td>
+<td>$10</td>
+<td>20%</td>
+</tr>
+<tr class="even">
+<td><strong>四重彩</strong></td>
+<td>Quartet</td>
+<td>選中頭四名（<strong>分先後</strong>）</td>
+<td>$10</td>
+<td>20%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>三T 範例</strong>：你買 2→5→8 三T。只有當結果恰好為第一名2號、第二名5號、第三名8號時才中獎。因為要求分先後，難度更高，賠率通常也更高。</p>
+<h3 id="過關投注">4.4 過關投注</h3>
+<table>
+<thead>
+<tr class="header">
+<th>投注方式</th>
+<th>英文</th>
+<th>玩法說明</th>
+<th>彩池扣除率</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>孖寶</strong></td>
+<td>Double</td>
+<td>選中指定兩場賽事的獨贏馬</td>
+<td>25%</td>
+</tr>
+<tr class="even">
+<td><strong>三寶過關</strong></td>
+<td>Treble</td>
+<td>選中指定三場賽事的獨贏馬</td>
+<td>25%</td>
+</tr>
+<tr class="odd">
+<td><strong>六環彩</strong></td>
+<td>Six Up</td>
+<td>選中指定六場賽事的獨贏馬</td>
+<td>25%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>注意</strong>：過關投注的彩池扣除率較高（25%），但因為命中難度大，累積獎金（Jackpot）有時可達數千萬甚至上億港元。</p>
+<h3 id="彩池扣除率總覽">4.5 彩池扣除率總覽</h3>
+<table>
+<thead>
+<tr class="header">
+<th>扣除率</th>
+<th>適用彩池</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>17.5%</strong></td>
+<td>獨贏、位置、連贏、位置連贏</td>
+</tr>
+<tr class="even">
+<td><strong>19.5%</strong></td>
+<td>單T（預測）</td>
+</tr>
+<tr class="odd">
+<td><strong>20%</strong></td>
+<td>三T、三寶、四連環、四重彩</td>
+</tr>
+<tr class="even">
+<td><strong>25%</strong></td>
+<td>孖寶、三寶過關、六環彩等過關彩池</td>
+</tr>
+</tbody>
+</table>
+<p>扣除率即是馬會從彩池中抽取的佣金比例。扣除率越高，投注者長期獲利的難度越大。</p>
+<hr />
+<h2 id="彩池運作原理">5. 彩池運作原理</h2>
+<h3 id="彩池制-pari-mutuel-與固定賠率的分別">5.1 彩池制 (Pari-Mutuel) 與固定賠率的分別</h3>
+<p>香港賽馬採用 <strong>彩池制（Pari-Mutuel）</strong>，而非固定賠率制（Fixed Odds）：</p>
+<table>
+<thead>
+<tr class="header">
+<th>比較項目</th>
+<th>彩池制 (Pari-Mutuel)</th>
+<th>固定賠率 (Fixed Odds)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>賠率確定時間</td>
+<td>開跑後才最終確定</td>
+<td>下注時即鎖定</td>
+</tr>
+<tr class="even">
+<td>對手</td>
+<td>與其他投注者對賭</td>
+<td>與莊家對賭</td>
+</tr>
+<tr class="odd">
+<td>賠率變化</td>
+<td>隨投注金額不斷變動</td>
+<td>下注後不變</td>
+</tr>
+<tr class="even">
+<td>莊家風險</td>
+<td>馬會無風險（只收佣金）</td>
+<td>莊家承擔風險</td>
+</tr>
+</tbody>
+</table>
+<h3 id="彩池運作流程">5.2 彩池運作流程</h3>
+<ol type="1">
+<li><strong>所有投注匯入彩池</strong>：例如某場獨贏彩池共收到 $1,000,000 投注。</li>
+<li><strong>扣除佣金</strong>：馬會按扣除率抽取佣金。以獨贏17.5%計算：$1,000,000 × 17.5% = $175,000 歸馬會，剩餘 $825,000 為可分配獎金。</li>
+<li><strong>按比例分配</strong>：$825,000 按勝出馬匹所獲投注額的比例分配給中獎投注者。</li>
+</ol>
+<h3 id="賠率計算示例">5.3 賠率計算示例</h3>
+<p>假設某場獨贏彩池總投注額為 $1,000,000，各馬投注分布如下：</p>
+<table>
+<thead>
+<tr class="header">
+<th>馬匹</th>
+<th>投注額</th>
+<th>佔比</th>
+<th>計算賠率</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1號馬</td>
+<td>$400,000</td>
+<td>40%</td>
+<td>$825,000 ÷ $400,000 = <strong>2.06倍</strong></td>
+</tr>
+<tr class="even">
+<td>2號馬</td>
+<td>$200,000</td>
+<td>20%</td>
+<td>$825,000 ÷ $200,000 = <strong>4.13倍</strong></td>
+</tr>
+<tr class="odd">
+<td>3號馬</td>
+<td>$100,000</td>
+<td>10%</td>
+<td>$825,000 ÷ $100,000 = <strong>8.25倍</strong></td>
+</tr>
+<tr class="even">
+<td>其餘馬匹</td>
+<td>$300,000</td>
+<td>30%</td>
+<td>按各自投注額計算</td>
+</tr>
+</tbody>
+</table>
+<h3 id="為何賠率不斷變化">5.4 為何賠率不斷變化</h3>
+<p>由於彩池制的賠率取決於所有投注者的總投注分布，每當有新的投注進入彩池，各馬的賠率便會隨之調整。大額投注某匹馬會拉低該馬賠率，同時推高其他馬匹的賠率。</p>
+<p><strong>實際意義</strong>：你在投注時看到的賠率只是「暫時賠率」，最終派彩以開跑一刻的「最終賠率」為準。</p>
+<hr />
+<h2 id="分析要素">6. 分析要素</h2>
+<h3 id="馬匹狀態">6.1 馬匹狀態</h3>
+<p>分析馬匹時需要關注以下關鍵指標：</p>
+<ul>
+<li><strong>近績（最近6場成績）</strong>：留意其名次走勢——是穩步上升還是逐漸下滑？</li>
+<li><strong>班次升降</strong>：剛升班的馬匹面對更強對手，可能表現下滑；剛降班者則可能佔優。</li>
+<li><strong>體重變化</strong>：正常波動為 ±5磅以內。若體重大幅增加（如超過10磅），可能代表狀態不佳；大幅減輕可能代表操練充足或身體出現問題。</li>
+<li><strong>首次配備變更</strong>：如首次加眼罩、綁舌帶等，可能顯著改變馬匹表現。</li>
+<li><strong>休賽期長短</strong>：長期休賽後復出的馬匹，首場表現通常需要打折扣看。</li>
+</ul>
+<h3 id="騎師分析">6.2 騎師分析</h3>
+<table>
+<thead>
+<tr class="header">
+<th>分析維度</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>整體勝出率</strong></td>
+<td>頂級騎師勝出率通常在15%以上</td>
+</tr>
+<tr class="even">
+<td><strong>近期狀態</strong></td>
+<td>近兩週的勝出率比全季數據更能反映當前手感</td>
+</tr>
+<tr class="odd">
+<td><strong>場地專長</strong></td>
+<td>部分騎師在跑馬地表現特別出色</td>
+</tr>
+<tr class="even">
+<td><strong>途程專長</strong></td>
+<td>留意騎師在不同途程的勝出率差異</td>
+</tr>
+<tr class="odd">
+<td><strong>與練馬師合作</strong></td>
+<td>某些騎師-練馬師組合勝出率明顯高於平均</td>
+</tr>
+</tbody>
+</table>
+<h3 id="練馬師分析">6.3 練馬師分析</h3>
+<ul>
+<li><strong>整體勝出率</strong>：反映馬房實力及管理水平。</li>
+<li><strong>馬房狀態（Form Cycle）</strong>：練馬師的馬房有時會進入「熱倉」（連續多匹勝出）或「冷倉」（長時間無勝績）。</li>
+<li><strong>特定途程/場地紀錄</strong>：部分練馬師擅長調教短途馬或長途馬。</li>
+<li><strong>與騎師合作紀錄</strong>：留意練馬師選用某騎師的場次及勝出率。</li>
+</ul>
+<h3 id="場地偏差-track-bias">6.4 場地偏差 (Track Bias)</h3>
+<p>場地偏差是指跑道上某些位置比其他位置更有利或不利的情況：</p>
+<ul>
+<li><strong>內欄偏差</strong>：當內欄草地較快時，靠近內欄跑的馬匹（前領馬、內檔馬）佔優。</li>
+<li><strong>外欄偏差</strong>：當內欄草地已被踐踏損壞時，跑外欄的馬匹可能更快。</li>
+<li><strong>沙田1000米直路的特殊偏差</strong>：此途程為純直路，場地偏差可能極端——某些日子近內欄最快，某些日子在中間或外側才快。觀察當日較早場次的跑法結果，有助判斷偏差方向。</li>
+</ul>
+<p><strong>實用建議</strong>：每個賽馬日開始後，留意首幾場賽事的走位及名次，判斷當日場地偏差的方向。</p>
+<h3 id="檔位統計">6.5 檔位統計</h3>
+<p>不同跑道配置及途程下，各檔位的歷史勝出率可能有顯著差異：</p>
+<table>
+<thead>
+<tr class="header">
+<th>場地/途程</th>
+<th>有利檔位（一般而言）</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>沙田1200米</td>
+<td>內檔（1-4檔）略佔優</td>
+</tr>
+<tr class="even">
+<td>沙田1600米</td>
+<td>中檔（4-8檔）較均衡</td>
+</tr>
+<tr class="odd">
+<td>沙田1000米直路</td>
+<td>視乎當日場地偏差，差異極大</td>
+</tr>
+<tr class="even">
+<td>跑馬地1200米</td>
+<td>內檔明顯佔優</td>
+</tr>
+<tr class="odd">
+<td>跑馬地1650米</td>
+<td>中檔至外檔略佔優</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>注意</strong>：以上為粗略的歷史趨勢，每個賽馬日的實際偏差可能不同。建議結合跑道（A/B/C）、場地狀況及當日觀察來綜合判斷。</p>
+</blockquote>
+<h3 id="賠率分析">6.6 賠率分析</h3>
+<p>賠率不僅反映馬匹的勝出概率，更反映市場資金的流向：</p>
+<ul>
+<li><strong>賠率大幅下降（縮水馬）</strong>：大量資金湧入某匹馬，可能代表知情人士看好。</li>
+<li><strong>賠率大幅上升（漲水馬）</strong>：資金流出，可能代表該馬狀態不佳或有負面訊息。</li>
+<li><strong>賠率隱含概率</strong>：賠率5倍 → 隱含勝出概率約 1/5 = 20%。若你認為實際概率高於20%，該馬便可能有投注價值。</li>
+<li><strong>留意開賽前5分鐘的賠率變動</strong>：這段時間的資金變化最具參考價值，因為大額投注者往往在最後才出手。</li>
+</ul>
+<hr />
+<h2 id="投注策略入門">7. 投注策略入門</h2>
+<h3 id="凱利公式-kelly-criterion">7.1 凱利公式 (Kelly Criterion)</h3>
+<p>凱利公式是一個用來決定最佳注碼比例的數學工具：</p>
+<p><br /><span class="math display">$$f = \frac{bp - q}{b}$$</span><br /></p>
+<p>其中： - <strong>f</strong> = 建議投注金額佔總資金的比例 - <strong>b</strong> = 淨賠率（即賠率減1。若賠率為5倍，b = 4） - <strong>p</strong> = 你估計的勝出概率 - <strong>q</strong> = 你估計的落敗概率（q = 1 - p）</p>
+<p><strong>計算範例</strong>：</p>
+<p>假設你認為某馬的勝出概率為25%（p = 0.25），目前賠率為5倍（b = 4）：</p>
+<pre><code>f = (4 × 0.25 - 0.75) / 4
+f = (1.0 - 0.75) / 4
+f = 0.25 / 4
+f = 0.0625（即 6.25%）</code></pre>
+<p>意即你應以總資金的6.25%作為投注金額。</p>
+<p><strong>實用建議</strong>：大多數職業投注者會使用「半凱利」甚至「四分一凱利」（即將公式結果除以2或4），以降低波動風險。</p>
+<h3 id="資金管理">7.2 資金管理</h3>
+<p>資金管理是長期生存的基石：</p>
+<ul>
+<li><strong>設定總資金</strong>：先決定你的「投注資金池」總額——這筆錢必須是你 <strong>完全輸得起</strong> 的金額。</li>
+<li><strong>單注上限</strong>：每次投注不應超過總資金的 <strong>2-5%</strong>。</li>
+<li><strong>永不押上全副身家</strong>：即使你對某場賽事極有信心，也絕不應一次性押上大部分資金。</li>
+<li><strong>定期檢視</strong>：每月檢視盈虧紀錄，根據資金池的變化調整注碼。</li>
+<li><strong>盈利提取</strong>：當資金池增長到一定程度，考慮提取部分盈利，鎖定戰果。</li>
+</ul>
+<h3 id="期望值-expected-value-ev">7.3 期望值 (Expected Value, EV)</h3>
+<p>期望值是判斷一項投注是否值得的核心概念：</p>
+<pre><code>EV = (勝出概率 × 淨利潤) - (落敗概率 × 投注金額)</code></pre>
+<p><strong>範例</strong>：賠率5倍的馬，你估計勝出概率為25%：</p>
+<pre><code>EV = (0.25 × $400) - (0.75 × $100)
+EV = $100 - $75
+EV = +$25</code></pre>
+<p>EV 為正數（+$25），代表此投注長期而言有利可圖。<strong>只在期望值為正時才應下注。</strong></p>
+<h3 id="價值投注-value-betting">7.4 價值投注 (Value Betting)</h3>
+<p>價值投注的核心理念：</p>
+<blockquote>
+<p>當你的模型估計某馬的勝出概率 <strong>高於</strong> 賠率所隱含的概率時，該投注便具有「價值」。</p>
+</blockquote>
+<table>
+<thead>
+<tr class="header">
+<th>你的估計概率</th>
+<th>賠率</th>
+<th>賠率隱含概率</th>
+<th>是否有價值？</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>25%</td>
+<td>5倍</td>
+<td>20%</td>
+<td>有價值（25% &gt; 20%）</td>
+</tr>
+<tr class="even">
+<td>15%</td>
+<td>5倍</td>
+<td>20%</td>
+<td>無價值（15% &lt; 20%）</td>
+</tr>
+<tr class="odd">
+<td>30%</td>
+<td>4倍</td>
+<td>25%</td>
+<td>有價值（30% &gt; 25%）</td>
+</tr>
+<tr class="even">
+<td>10%</td>
+<td>8倍</td>
+<td>12.5%</td>
+<td>無價值（10% &lt; 12.5%）</td>
+</tr>
+</tbody>
+</table>
+<p>注意：賠率隱含概率的計算方式為 <strong>1 ÷ 賠率</strong>（例如 1 ÷ 5 = 20%）。</p>
+<h3 id="為何大部分人長期虧損">7.5 為何大部分人長期虧損</h3>
+<p>這是每位新手必須清楚理解的殘酷現實：</p>
+<ol type="1">
+<li><strong>彩池扣除率是天然壁壘</strong>：17.5%至25%的扣除率意味著每投注 $100，平均只有 $75-$82.5 會回到投注者手中。</li>
+<li><strong>零和博弈減去佣金</strong>：賽馬投注本質上是投注者之間的博弈，而馬會從中抽取佣金。要長期獲利，你需要 <strong>持續打敗其他投注者</strong>。</li>
+<li><strong>情緒化決策</strong>：追注（輸了之後加大注碼試圖回本）是最常見的虧損原因。</li>
+<li><strong>過度投注</strong>：下注場次太多、每場都買，會大幅增加被扣除率蠶食的金額。</li>
+<li><strong>缺乏紀律</strong>：不按計劃行事，受環境、氣氛或他人意見影響而改變決定。</li>
+</ol>
+<h3 id="紀律的重要性">7.6 紀律的重要性</h3>
+<p>成功的投注者與失敗者之間最大的分別，往往不在於分析能力，而在於 <strong>紀律</strong>：</p>
+<ul>
+<li><strong>嚴格執行策略</strong>：制定好的計劃就要執行，不因一兩次失敗而推翻整套方法。</li>
+<li><strong>記錄每一注</strong>：詳細記錄每次投注的理由、金額、結果，定期回顧分析。</li>
+<li><strong>避免情緒化追注</strong>：輸了一場之後，切勿在下一場加大注碼「追回」。</li>
+<li><strong>接受虧損是常態</strong>：即使最優秀的職業投注者，命中率也通常只有20-30%。大部分時間是在輸錢，但靠少數高賠率的勝出來覆蓋虧損並獲利。</li>
+<li><strong>懂得休息</strong>：當連續虧損或情緒不佳時，最好的策略是暫停投注，待冷靜後再回來。</li>
+<li><strong>持續學習</strong>：賽馬分析是一門需要不斷積累經驗的技術，保持學習和反思的習慣。</li>
+</ul>
+<hr />
+<h2 id="總結">總結</h2>
+<p>賽馬既是一項歷史悠久的運動，也是一個複雜的分析與博弈領域。作為初學者，建議你：</p>
+<ol type="1">
+<li><strong>先觀察，後投注</strong>：花幾個賽馬日純粹觀看賽事，熟悉運作流程。</li>
+<li><strong>從小額開始</strong>：初期以最低注額參與，重點在於學習而非獲利。</li>
+<li><strong>專注少數場次</strong>：不要每場都買，選擇你最有把握的1-2場深入分析。</li>
+<li><strong>建立自己的分析系統</strong>：逐步累積數據和經驗，發展出適合自己的分析方法。</li>
+<li><strong>永遠謹記</strong>：賽馬投注應以娛樂為主，切勿投入超過自己承受能力的資金。</li>
+</ol>
+<hr />
+<p><em>本指南僅供參考及教育用途，不構成任何投注建議。賽馬投注涉及風險，請量力而為。</em></p>
+
+</body>
+</html>

@@ -91,6 +91,9 @@ class Backtester:
         max_odds: float = 20.0,
         top_rank_only: int | None = 3,
         kelly_fraction: float | None = None,
+        max_bet_pct: float | None = None,
+        model_kind: str = "classifier",
+        bet_type: str = "WIN",
     ) -> tuple[list[BacktestPeriod], BacktestMetrics]:
         """
         Run walk-forward backtest.
@@ -110,10 +113,14 @@ class Backtester:
         self.bet_sizer.update_bankroll(bankroll)
         if kelly_fraction is not None:
             self.bet_sizer.kelly_fraction = kelly_fraction
+        if max_bet_pct is not None:
+            self.bet_sizer.max_bet_pct = max_bet_pct
         self._edge_margin = edge_margin
         self._min_odds = min_odds
         self._max_odds = max_odds
         self._top_rank_only = top_rank_only
+        self._model_kind = model_kind
+        self._bet_type = bet_type
         periods = []
         current_test_start = start_date
 
@@ -141,6 +148,11 @@ class Backtester:
                 self.bet_sizer.bankroll + period.total_pnl
             )
 
+            # Drop identity-map state between periods. Without this the session
+            # accumulates ~15K Race+Runner objects per period; by period ~8 the
+            # B-tree page reads in feature queries slow to a crawl.
+            self.session.expunge_all()
+
             # Roll forward
             current_test_start = test_end + timedelta(days=1)
 
@@ -163,9 +175,22 @@ class Backtester:
             test_end=test_end,
         )
 
-        # Train model
+        # Train model — dispatch by model_kind:
+        #   classifier  → existing scale_pos_weight LightGBM/XGBoost
+        #   calibrated  → same base estimator wrapped in isotonic regression
+        #   ranker      → LightGBM LambdaRank (per-race ordering)
         trainer = ModelTrainer(self.session)
-        model, metadata = trainer.train_win_model(train_start, train_end, model_type)
+        kind = getattr(self, "_model_kind", "classifier")
+        if kind == "ranker":
+            model, metadata = trainer.train_win_ranker(train_start, train_end)
+        elif kind == "calibrated":
+            model, metadata = trainer.train_win_model(
+                train_start, train_end, model_type, calibrate=True
+            )
+        else:
+            model, metadata = trainer.train_win_model(
+                train_start, train_end, model_type
+            )
         if model is None:
             logger.warning("Failed to train model for period %s-%s", train_start, train_end)
             return period
@@ -199,9 +224,15 @@ class Backtester:
 
             X = df[feature_cols].copy().fillna(df[feature_cols].median())
 
-            # Predict
-            win_probs = model.predict_proba(X)[:, 1]
-            win_probs_norm = win_probs / win_probs.sum()
+            # Predict — ranker emits raw scores (softmax within race);
+            # classifier/calibrated emit per-runner probabilities (then renormalize).
+            if kind == "ranker":
+                scores = model.predict(X)
+                exp_s = np.exp(scores - scores.max())
+                win_probs_norm = exp_s / exp_s.sum()
+            else:
+                win_probs = model.predict_proba(X)[:, 1]
+                win_probs_norm = win_probs / win_probs.sum()
 
             # Rank horses by model probability (for top_rank_only filter)
             ranked_idx = np.argsort(-win_probs_norm)
@@ -228,11 +259,21 @@ class Backtester:
 
                 # Multiplicative edge threshold (margin of safety)
                 if model_prob > implied_prob * (1 + self._edge_margin):
-                    bet_amount = self.bet_sizer.size_bet(model_prob, win_odds, "WIN")
+                    # Place pool: same horse picks, different settlement.
+                    # Heuristic place payout: HKJC PLA dividend is roughly
+                    # 0.4x of WIN dividend for the same horse — used here for
+                    # Kelly sizing only; settlement uses actual PLA dividend.
+                    bt = self._bet_type
+                    if bt == "PLA":
+                        sizing_odds = 1 + (win_odds - 1) * 0.4
+                        place_prob = min(0.95, model_prob * 2.7)
+                        bet_amount = self.bet_sizer.size_bet(place_prob, sizing_odds, "PLA")
+                    else:
+                        bet_amount = self.bet_sizer.size_bet(model_prob, win_odds, "WIN")
                     if bet_amount > 0:
                         # Settle against actual results
                         pnl = self._settle_simulated_bet(
-                            race.id, horse_no, bet_amount, "WIN"
+                            race.id, horse_no, bet_amount, bt
                         )
 
                         bet_record = BetRecord(
@@ -240,7 +281,7 @@ class Backtester:
                             racecourse=race.racecourse,
                             race_no=race.race_no,
                             horse_no=horse_no,
-                            bet_type="WIN",
+                            bet_type=bt,
                             bet_amount=bet_amount,
                             model_prob=model_prob,
                             odds=win_odds,
