@@ -1,8 +1,9 @@
 [Unit]
-Description=Daily HKJC paper-trade predict at 09:00 HKT
+Description=Daily HKJC paper-trade predict at 10:00 HKT
 
 [Timer]
-OnCalendar=*-*-* 09:00:00 Asia/Hong_Kong
+# 10:00 HKT, after horseracing.service scrapes the day's racecard at 09:00 HKT
+OnCalendar=*-*-* 10:00:00 Asia/Hong_Kong
 Persistent=true
 Unit=paper-predict-today.service
 
