@@ -295,6 +295,12 @@ class DataCleaner:
         code = re.sub(r"[^A-Za-z]", "", name)[:10].upper() or name[:10]
         jockey = self.session.query(Jockey).filter_by(name=name).first()
         if not jockey:
+            # Two different names can produce the same 10-char code (e.g.
+            # "Brandon Yu" and "Brandon Yuen" both → "BRANDONYU"). Look up
+            # by code before inserting to avoid the UNIQUE constraint trip
+            # that aborts the entire racecard scrape transaction.
+            jockey = self.session.query(Jockey).filter_by(code=code).first()
+        if not jockey:
             jockey = Jockey(code=code, name=name, source="hkjc")
             self.session.add(jockey)
             self.session.flush()
@@ -310,6 +316,9 @@ class DataCleaner:
 
         code = re.sub(r"[^A-Za-z]", "", name)[:10].upper() or name[:10]
         trainer = self.session.query(Trainer).filter_by(name=name).first()
+        if not trainer:
+            # Same code-collision protection as _get_or_create_jockey.
+            trainer = self.session.query(Trainer).filter_by(code=code).first()
         if not trainer:
             trainer = Trainer(code=code, name=name, source="hkjc")
             self.session.add(trainer)
