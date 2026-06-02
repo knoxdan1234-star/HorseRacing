@@ -12,6 +12,7 @@ import logging
 import signal
 import threading
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -22,6 +23,16 @@ from db.database import get_session
 
 logger = logging.getLogger(__name__)
 
+# All HKJC scheduling and "today" logic is in Hong Kong time. The server runs
+# in UTC, so without this every CronTrigger(hour=...) would fire 8 hours late
+# (e.g. the 09:00 racecard scrape ran at 17:00 HKT, after Sunday races start).
+HK_TZ = ZoneInfo("Asia/Hong_Kong")
+
+
+def hk_today() -> date:
+    """Today's date in Hong Kong time (server clock is UTC)."""
+    return datetime.now(HK_TZ).date()
+
 
 class Orchestrator:
     """Central coordinator for all prediction system agents."""
@@ -29,6 +40,7 @@ class Orchestrator:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.scheduler = BlockingScheduler(
+            timezone=HK_TZ,
             job_defaults={"coalesce": True, "max_instances": 1},
         )
         self._setup_jobs()
@@ -140,7 +152,7 @@ class Orchestrator:
 
     def _is_race_day(self) -> bool:
         """Check if today is a likely race day (Wed or Sun)."""
-        today = date.today()
+        today = hk_today()
         return today.weekday() in (2, 6)  # Wed=2, Sun=6
 
     def _job_check_fixtures(self):
@@ -149,7 +161,7 @@ class Orchestrator:
         try:
             from agents.collector.hkjc.scraper_results import ResultsScraper
             scraper = ResultsScraper()
-            today = date.today()
+            today = hk_today()
             meetings = scraper.get_meeting_dates(today.year, today.month)
             logger.info("Found %d meetings this month", len(meetings))
 
@@ -174,7 +186,7 @@ class Orchestrator:
             session = get_session()
             scraper = RaceCardScraper()
             cleaner = DataCleaner(session)
-            today = date.today()
+            today = hk_today()
 
             # Try both courses
             for course in ["ST", "HV"]:
@@ -210,7 +222,7 @@ class Orchestrator:
 
             bet_sizer = BetSizer(bankroll=PnLTracker(session, self.settings.INITIAL_BANKROLL).get_bankroll())
 
-            today = date.today()
+            today = hk_today()
             races = session.query(Race).filter_by(race_date=today).all()
 
             for race in races:
@@ -244,7 +256,7 @@ class Orchestrator:
 
             session = get_session()
             discord = DiscordWebhook()
-            today = date.today()
+            today = hk_today()
 
             races = session.query(Race).filter_by(race_date=today).order_by(Race.race_no).all()
 
@@ -307,7 +319,7 @@ class Orchestrator:
             session = get_session()
             scraper = OddsScraper()
             cleaner = DataCleaner(session)
-            today = date.today()
+            today = hk_today()
 
             for course in ["ST", "HV"]:
                 snapshots = scraper.poll_all_races(today, course, 11)
@@ -332,7 +344,7 @@ class Orchestrator:
             session = get_session()
             scraper = ResultsScraper()
             cleaner = DataCleaner(session)
-            today = date.today()
+            today = hk_today()
 
             for course in ["ST", "HV"]:
                 results = scraper.scrape_meeting(today, course)
@@ -355,7 +367,7 @@ class Orchestrator:
 
             session = get_session()
             tracker = PnLTracker(session, self.settings.INITIAL_BANKROLL)
-            today = date.today()
+            today = hk_today()
 
             races = session.query(Race).filter_by(race_date=today).all()
             total_pnl = 0
@@ -391,7 +403,7 @@ class Orchestrator:
             tracker = PnLTracker(session, self.settings.INITIAL_BANKROLL)
 
             # Last week (Monday to Sunday)
-            today = date.today()
+            today = hk_today()
             last_monday = today - timedelta(days=7)
             weekly = tracker.get_weekly_pnl(last_monday)
 
@@ -456,7 +468,7 @@ class Orchestrator:
             trainer = ModelTrainer(session)
 
             # Train on last 24 months of data
-            today = date.today()
+            today = hk_today()
             train_start = today - timedelta(days=730)
 
             # Train win model
