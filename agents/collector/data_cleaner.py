@@ -154,7 +154,10 @@ class DataCleaner:
 
         Returns the Race ORM object, or None if invalid.
         """
-        from agents.collector.hkjc.scraper_racecard import RaceCardInfo
+        from agents.collector.hkjc.scraper_racecard import (
+            MAX_RACES_PER_MEETING,
+            RaceCardInfo,
+        )
 
         if not isinstance(card, RaceCardInfo):
             logger.error("Invalid racecard type: %s", type(card))
@@ -162,6 +165,15 @@ class DataCleaner:
         if not card.entries:
             logger.warning(
                 "Skipping racecard with no entries: %s R%d", card.race_date, card.race_no
+            )
+            return None
+        # Defense-in-depth: a meeting never has more than ~11 races. Reject
+        # implausible race numbers so a misbehaving scraper can't flood the DB
+        # with thousands of bogus races under one date.
+        if not 1 <= card.race_no <= MAX_RACES_PER_MEETING:
+            logger.warning(
+                "Rejecting racecard with implausible race_no %d: %s %s",
+                card.race_no, card.race_date, card.racecourse,
             )
             return None
 

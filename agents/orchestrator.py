@@ -28,6 +28,11 @@ logger = logging.getLogger(__name__)
 # (e.g. the 09:00 racecard scrape ran at 17:00 HKT, after Sunday races start).
 HK_TZ = ZoneInfo("Asia/Hong_Kong")
 
+# A single race day has at most ~11 races (rarely two meetings → ~22). Anything
+# beyond this means the racecard scrape misfired; refuse to predict/notify on it
+# rather than flood Discord with thousands of bogus predictions.
+MAX_RACES_PER_DAY = 24
+
 
 def hk_today() -> date:
     """Today's date in Hong Kong time (server clock is UTC)."""
@@ -151,9 +156,25 @@ class Orchestrator:
     # ===== Job implementations =====
 
     def _is_race_day(self) -> bool:
-        """Check if today is a likely race day (Wed or Sun)."""
+        """Cheap pre-filter: HKJC only races on Wed/Sun. Confirm an actual
+        meeting with _meetings_today() before doing anything that writes data
+        or notifies — not every Wed/Sun has a meeting."""
         today = hk_today()
         return today.weekday() in (2, 6)  # Wed=2, Sun=6
+
+    def _meetings_today(self) -> list[str]:
+        """Racecourses with a real HKJC meeting today, from the fixture
+        calendar. Returns [] when there is no meeting, so the scrape/predict/
+        send jobs no-op on empty Wed/Sun instead of scraping garbage."""
+        from agents.collector.hkjc.scraper_results import ResultsScraper
+
+        today = hk_today()
+        try:
+            meetings = ResultsScraper().get_meeting_dates(today.year, today.month)
+        except Exception as e:
+            logger.error("Fixture lookup failed: %s", e)
+            return []
+        return [rc for (d, rc) in meetings if d == today]
 
     def _job_check_fixtures(self):
         """Check HKJC fixture calendar for upcoming meetings."""
@@ -178,7 +199,12 @@ class Orchestrator:
             logger.debug("Not a race day, skipping racecard scrape")
             return
 
-        logger.info("Scraping today's race card...")
+        courses = self._meetings_today()
+        if not courses:
+            logger.info("No HKJC meeting today (%s) — skipping racecard scrape", hk_today())
+            return
+
+        logger.info("Scraping today's race card for %s...", courses)
         try:
             from agents.collector.hkjc.scraper_racecard import RaceCardScraper
             from agents.collector.data_cleaner import DataCleaner
@@ -188,8 +214,8 @@ class Orchestrator:
             cleaner = DataCleaner(session)
             today = hk_today()
 
-            # Try both courses
-            for course in ["ST", "HV"]:
+            # Only scrape courses with a real meeting today (per fixtures).
+            for course in courses:
                 cards = scraper.scrape_meeting_card(today, course)
                 if cards:
                     logger.info("Got %d race cards for %s at %s", len(cards), today, course)
@@ -198,7 +224,6 @@ class Orchestrator:
                         if cleaner.store_racecard(card):
                             stored += 1
                     logger.info("Persisted %d/%d racecards to DB", stored, len(cards))
-                    break
 
             session.close()
         except Exception as e:
@@ -224,6 +249,13 @@ class Orchestrator:
 
             today = hk_today()
             races = session.query(Race).filter_by(race_date=today).all()
+            if len(races) > MAX_RACES_PER_DAY:
+                logger.error(
+                    "Refusing to predict: %d races for %s exceeds %d — data looks corrupt",
+                    len(races), today, MAX_RACES_PER_DAY,
+                )
+                session.close()
+                return
 
             for race in races:
                 predictions = predictor.predict_race(race.id)
@@ -259,6 +291,13 @@ class Orchestrator:
             today = hk_today()
 
             races = session.query(Race).filter_by(race_date=today).order_by(Race.race_no).all()
+            if len(races) > MAX_RACES_PER_DAY:
+                logger.error(
+                    "Refusing to send: %d races for %s exceeds %d — not flooding Discord",
+                    len(races), today, MAX_RACES_PER_DAY,
+                )
+                session.close()
+                return
 
             for race in races:
                 predictions = (

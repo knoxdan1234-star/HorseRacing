@@ -20,6 +20,9 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+# Largest credible HK meeting is ~11 races; use 14 as a safe upper bound.
+MAX_RACES_PER_MEETING = 14
+
 
 @dataclass
 class RaceCardEntry:
@@ -81,7 +84,11 @@ class RaceCardScraper:
         race_no = 1
         consecutive_failures = 0
 
-        while consecutive_failures < 2:
+        # HK meetings are at most ~11 races. The 2026 HKJC site returns a
+        # parseable (default) card for out-of-range RaceNo values, so the
+        # "2 consecutive empties" stop can never trigger and the loop walks
+        # race_no into the thousands. Cap it hard as a backstop.
+        while consecutive_failures < 2 and race_no <= MAX_RACES_PER_MEETING:
             try:
                 card = self.scrape_racecard(race_date, racecourse, race_no)
                 if card and card.entries:
