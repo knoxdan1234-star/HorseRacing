@@ -19,6 +19,11 @@ from config import settings
 
 logger = logging.getLogger(__name__)
 
+# Largest credible HK meeting is ~11 races; cap loops here too (mirrors the
+# racecard scraper) so a runaway results page can't walk race_no into the
+# thousands. Kept local to avoid importing the racecard module.
+MAX_RACES_PER_MEETING = 14
+
 RACECOURSES = {"ST": "Sha Tin", "HV": "Happy Valley"}
 
 
@@ -84,7 +89,10 @@ class ResultsScraper:
         race_no = 1
         consecutive_failures = 0
 
-        while consecutive_failures < 2:
+        # Same runaway guard as the racecard scraper: an in-progress/empty
+        # results page returns a parseable default card for out-of-range
+        # RaceNo, so the "2 consecutive empties" stop never fires. Cap hard.
+        while consecutive_failures < 2 and race_no <= MAX_RACES_PER_MEETING:
             try:
                 result = self.scrape_race(race_date, racecourse, race_no)
                 if result and result.runners:

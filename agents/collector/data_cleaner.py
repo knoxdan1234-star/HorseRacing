@@ -84,6 +84,15 @@ class DataCleaner:
         if not result.runners:
             logger.warning("Skipping race with no runners: %s R%d", result.race_date, result.race_no)
             return None
+        # Defense-in-depth: reject implausible race numbers (a meeting never has
+        # more than ~11 races) so a runaway results scraper can't flood the DB.
+        from agents.collector.hkjc.scraper_racecard import MAX_RACES_PER_MEETING
+        if not 1 <= result.race_no <= MAX_RACES_PER_MEETING:
+            logger.warning(
+                "Rejecting race result with implausible race_no %d: %s %s",
+                result.race_no, result.race_date, result.racecourse,
+            )
+            return None
 
         # Check for duplicate
         existing = (
