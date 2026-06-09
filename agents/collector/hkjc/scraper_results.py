@@ -135,6 +135,20 @@ class ResultsScraper:
                     logger.error("Failed after %d retries: %s", settings.MAX_RETRIES, url)
                     return None
 
+        # HKJC redirects a not-yet-run date to the latest COMPLETED meeting,
+        # so a request for today/future silently returns a prior meeting's
+        # results. Reject when the page we landed on isn't the date we asked
+        # for — otherwise stale results get stored under the wrong date.
+        landed = re.search(r"RaceDate=(\d{4})/(\d{2})/(\d{2})", resp.url)
+        if landed:
+            landed_date = date(int(landed.group(1)), int(landed.group(2)), int(landed.group(3)))
+            if landed_date != race_date:
+                logger.info(
+                    "Results for %s %s R%d redirected to %s (no results yet) — skipping",
+                    race_date, racecourse, race_no, landed_date,
+                )
+                return None
+
         soup = BeautifulSoup(resp.text, "lxml")
         return self._parse_race_page(soup, race_date, racecourse, race_no)
 
