@@ -105,7 +105,11 @@ class DataCleaner:
             .first()
         )
         if existing:
-            logger.debug("Race already exists: %s %s R%d", result.race_date, result.racecourse, result.race_no)
+            # The racecard scraper creates the Race pre-race (no results). The
+            # results scrape must UPDATE it in place — returning early here was
+            # silently discarding every finish position and dividend, so bets
+            # never settled and current-season races had no training labels.
+            self._apply_results_to_existing(existing, result)
             return existing
 
         # Create Race
@@ -154,6 +158,64 @@ class DataCleaner:
             self.session.rollback()
             logger.error("Failed to store race: %s", e)
             return None
+
+    def _apply_results_to_existing(self, race: Race, result) -> None:
+        """Backfill results onto a Race row that already exists (created pre-race
+        by the racecard scraper). Updates runner finish positions / final odds and
+        inserts dividends. Only fills fields that are still empty so a re-scrape is
+        idempotent and never overwrites good data."""
+        changed = False
+
+        if result.race_class and not race.race_class:
+            race.race_class = result.race_class
+            changed = True
+        if result.finish_time and not race.finish_time:
+            race.finish_time = result.finish_time
+            changed = True
+
+        runners_by_no = {r.horse_no: r for r in race.runners}
+        for rd in result.runners:
+            r = runners_by_no.get(rd.horse_no)
+            if r is None:
+                continue
+            fp = getattr(rd, "finish_position", None)
+            if fp is not None and r.finish_position is None:
+                r.finish_position = fp
+                r.scratched = (fp == 0)
+                changed = True
+            wo = getattr(rd, "win_odds", None)
+            if wo is not None and r.win_odds is None:
+                r.win_odds = wo
+                changed = True
+            if getattr(rd, "lbw", None) and not r.lbw:
+                r.lbw = rd.lbw
+                changed = True
+            if getattr(rd, "finish_time", None) and not r.finish_time:
+                r.finish_time = rd.finish_time
+                changed = True
+
+        # Insert dividends only if none exist for this race yet
+        has_div = self.session.query(Dividend).filter_by(race_id=race.id).first()
+        if not has_div:
+            for div_data in result.dividends:
+                if div_data.payout > 0:
+                    self.session.add(Dividend(
+                        race_id=race.id,
+                        pool_type=div_data.pool_type,
+                        combination=div_data.combination,
+                        payout=div_data.payout,
+                    ))
+                    changed = True
+
+        if not changed:
+            return
+        try:
+            self.session.commit()
+            logger.info("Updated results for existing race: %s %s R%d",
+                        race.race_date, race.racecourse, race.race_no)
+        except Exception as e:
+            self.session.rollback()
+            logger.error("Failed to update race result: %s", e)
 
     def store_racecard(self, card) -> Race | None:
         """
@@ -379,6 +441,19 @@ class DataCleaner:
             )
             self.session.add(odds)
             count += 1
+
+            # Also push the latest WIN odds onto the Runner row, otherwise
+            # race-day runners keep win_odds=None and the predictor/feature
+            # engine fall back to a fabricated 20.0 — betting on odds that
+            # don't exist. OddsHistory alone is never read back onto Runner.
+            if snap.pool_type == "WIN" and snap.odds_value:
+                runner = (
+                    self.session.query(Runner)
+                    .filter_by(race_id=race.id, horse_no=snap.horse_no)
+                    .first()
+                )
+                if runner:
+                    runner.win_odds = snap.odds_value
 
         try:
             self.session.commit()

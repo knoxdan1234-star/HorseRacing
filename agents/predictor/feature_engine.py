@@ -131,8 +131,13 @@ class FeatureEngineer:
         features["rating"] = runner.rating or 60
         features["rating_change"] = runner.rating_change or 0
         features["season_stakes"] = runner.season_stakes or 0.0
-        features["win_odds"] = runner.win_odds or 20.0
-        features["implied_probability"] = 1.0 / features["win_odds"] if features["win_odds"] > 0 else 0.05
+        # Keep odds as-is (may be None pre-poll). Do NOT fabricate a value here:
+        # the model fills NaN with the column median at fit/predict time, and the
+        # betting code must refuse to price a bet when real odds are missing.
+        features["win_odds"] = runner.win_odds
+        features["implied_probability"] = (
+            1.0 / runner.win_odds if runner.win_odds and runner.win_odds > 0 else np.nan
+        )
 
         # Equipment flags
         gear = (runner.gear or "").upper()
@@ -179,7 +184,7 @@ class FeatureEngineer:
 
         # --- Draw bias ---
         features["draw_bias_score"] = self._compute_draw_bias(
-            runner.draw or 7, race.racecourse, race.distance or 1200
+            runner.draw or 7, race.racecourse, race.distance or 1200, race.race_date
         )
 
         # --- Odds rank within race ---
@@ -375,12 +380,17 @@ class FeatureEngineer:
         wins = sum(1 for r in combo_runs if r.finish_position == 1)
         return wins / len(combo_runs)
 
-    def _compute_draw_bias(self, draw: int, racecourse: str, distance: int) -> float:
+    def _compute_draw_bias(self, draw: int, racecourse: str, distance: int,
+                           before_date: date) -> float:
         """
         Compute draw bias score from historical data.
         Returns a score 0-1 where higher = more advantaged.
         """
-        # Query historical win rate for this draw at this track/distance
+        # Query historical win rate for this draw at this track/distance.
+        # MUST exclude the current race and anything after it — without the
+        # date filter this leaked the race's own (and future) results into the
+        # feature, inflating backtest accuracy. order_by before limit so the
+        # 200-row sample is the most recent, not an arbitrary set.
         runs = (
             self.session.query(Runner)
             .join(Race)
@@ -388,10 +398,12 @@ class FeatureEngineer:
                 Runner.draw == draw,
                 Race.racecourse == racecourse,
                 Race.distance.between(distance - 100, distance + 100),
+                Race.race_date < before_date,
                 Runner.scratched == False,
                 Runner.finish_position.isnot(None),
                 Runner.finish_position > 0,
             )
+            .order_by(Race.race_date.desc())
             .limit(200)
             .all()
         )

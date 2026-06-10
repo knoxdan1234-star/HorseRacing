@@ -35,10 +35,13 @@ class BetSizer:
         max_bet_pct: float | None = None,
         min_bet_amount: float | None = None,
     ):
-        self.bankroll = bankroll or settings.INITIAL_BANKROLL
-        self.kelly_fraction = kelly_fraction or settings.KELLY_FRACTION
-        self.max_bet_pct = max_bet_pct or settings.MAX_BET_PCT
-        self.min_bet_amount = min_bet_amount or settings.MIN_BET_AMOUNT
+        # Use explicit None checks: `x or default` wrongly replaces a legitimate
+        # 0 (e.g. a depleted bankroll, or kelly_fraction=0 to disable betting)
+        # with the full default.
+        self.bankroll = bankroll if bankroll is not None else settings.INITIAL_BANKROLL
+        self.kelly_fraction = kelly_fraction if kelly_fraction is not None else settings.KELLY_FRACTION
+        self.max_bet_pct = max_bet_pct if max_bet_pct is not None else settings.MAX_BET_PCT
+        self.min_bet_amount = min_bet_amount if min_bet_amount is not None else settings.MIN_BET_AMOUNT
 
     def update_bankroll(self, new_bankroll: float):
         """Update the current bankroll."""
@@ -61,9 +64,11 @@ class BetSizer:
         if model_prob <= 0 or model_prob >= 1 or odds <= 1:
             return 0.0
 
-        # Adjust odds for pool deduction
-        deduction = POOL_DEDUCTIONS.get(bet_type, 0.175)
-        net_odds = (odds - 1) * (1 - deduction)
+        # HKJC tote odds are already net of pool takeout, so the net payout per
+        # $1 is simply (odds - 1). Applying POOL_DEDUCTIONS here double-counted
+        # the takeout and shrank Kelly stakes, and was inconsistent with the
+        # edge filter elsewhere (which uses raw 1/odds).
+        net_odds = odds - 1
 
         if net_odds <= 0:
             return 0.0
@@ -125,8 +130,9 @@ class BetSizer:
 
         EV = (prob * net_payout) - ((1-prob) * bet_amount)
         """
-        deduction = POOL_DEDUCTIONS.get(bet_type, 0.175)
-        net_payout = bet_amount * (odds - 1) * (1 - deduction)
+        # Tote odds already include takeout — net profit on a win is
+        # bet_amount * (odds - 1); don't deduct takeout again.
+        net_payout = bet_amount * (odds - 1)
         ev = (model_prob * net_payout) - ((1 - model_prob) * bet_amount)
         return ev
 

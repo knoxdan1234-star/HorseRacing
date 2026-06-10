@@ -119,12 +119,15 @@ class PnLTracker:
                     won = True
 
                 if won:
-                    # Find dividend
+                    # Find dividend — the PLACE pool has a row per placed horse
+                    # (1st/2nd/3rd), so we must match this horse's number or we
+                    # pay out whatever row comes first (usually the winner's).
                     div = (
                         self.session.query(Dividend)
                         .filter_by(
                             race_id=prediction.race_id,
                             pool_type=prediction.bet_type,
+                            combination=str(prediction.horse_no),
                         )
                         .first()
                     )
@@ -133,11 +136,13 @@ class PnLTracker:
                         # Dividend is per $10 unit
                         pnl = (bet_amount / 10) * div.payout - bet_amount
                     else:
-                        # Use odds as fallback
+                        # Fallback from tote odds. HKJC win odds are already net
+                        # of takeout (pari-mutuel), so profit = (odds-1)*stake —
+                        # do NOT deduct takeout again.
                         if prediction.bet_type == "WIN" and runner.win_odds:
-                            pnl = bet_amount * (runner.win_odds - 1) * 0.825  # After deduction
+                            pnl = bet_amount * (runner.win_odds - 1)
                         elif prediction.bet_type == "PLA" and runner.win_odds:
-                            pnl = bet_amount * (runner.win_odds / 3 - 1) * 0.825
+                            pnl = bet_amount * (runner.win_odds / 3 - 1)
 
         elif prediction.bet_type in ("QIN", "QPL", "FCT", "TCE", "TRI"):
             # Exotic bets: check combination

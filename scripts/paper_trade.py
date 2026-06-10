@@ -183,6 +183,10 @@ def predict_for_date(target: date) -> int:
     sizer = BetSizer(bankroll=bankroll, kelly_fraction=KELLY_FRACTION)
     logger.info("Current bankroll: $%.2f", bankroll)
 
+    # Already-placed (race_id, horse_no) pairs — guard against double-staking
+    # when predict is re-run for the same date (cron overlap, crash retry).
+    already_bet = {(b["race_id"], b["horse_no"]) for b in ledger}
+
     n_placed = 0
     placed_bets: list[PaperBet] = []
     for race in races:
@@ -199,9 +203,16 @@ def predict_for_date(target: date) -> int:
         for i, (_, row) in enumerate(df.iterrows()):
             if i not in top_set:
                 continue
-            win_odds = float(row.get("win_odds") or 20.0)
+            # Require real live odds — never price a bet off a fabricated value.
+            wo = row.get("win_odds")
+            if wo is None or wo != wo or float(wo) <= 0:  # None / NaN / nonpositive
+                continue
+            win_odds = float(wo)
             if win_odds < MIN_ODDS or win_odds > MAX_ODDS:
                 continue
+            horse_no = int(row["horse_no"])
+            if (race.id, horse_no) in already_bet:
+                continue  # already staked this runner — don't double-bet
             model_prob = float(win_probs[i])
             implied = 1.0 / win_odds
             if model_prob <= implied * (1 + EDGE_MARGIN):
@@ -210,7 +221,6 @@ def predict_for_date(target: date) -> int:
             if bet_amount <= 0:
                 continue
 
-            horse_no = int(row["horse_no"])
             runner = (
                 session.query(Runner)
                 .filter_by(race_id=race.id, horse_no=horse_no)
@@ -272,8 +282,19 @@ def settle_through(through: date) -> int:
             .filter_by(race_id=entry["race_id"], horse_no=entry["horse_no"])
             .first()
         )
-        if not runner or not runner.finish_position:
+        if not runner or runner.finish_position is None:
             # Result not yet recorded — skip until next settle
+            continue
+        if runner.finish_position == 0:
+            # Scratched / did-not-finish — HKJC refunds WIN bets, so void at $0
+            # rather than leaving it pending forever or counting it as a loss.
+            entry["finish_position"] = 0
+            entry["pnl"] = 0.0
+            entry["actual_dividend"] = None
+            entry["settled"] = True
+            n_settled += 1
+            just_settled.append(entry)
+            logger.info("VOIDED (scratched) race %d #%d", entry["race_id"], entry["horse_no"])
             continue
         entry["finish_position"] = runner.finish_position
         won = runner.finish_position == 1
@@ -287,8 +308,9 @@ def settle_through(through: date) -> int:
                 .first()
             )
             if not div:
-                # Estimate from win odds with 17.5% deduction
-                payout = (entry["win_odds"] - 1) * (1 - 0.175) * entry["bet_amount"]
+                # Fallback from tote win odds, which already net out takeout —
+                # profit on a win is (odds - 1) * stake; don't deduct again.
+                payout = (entry["win_odds"] - 1) * entry["bet_amount"]
                 entry["pnl"] = payout
                 entry["actual_dividend"] = None
             else:

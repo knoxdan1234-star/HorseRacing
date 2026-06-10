@@ -104,7 +104,7 @@ class Orchestrator:
         # --- Race day: Settle bets ---
         self.scheduler.add_job(
             self._job_settle_bets,
-            CronTrigger(hour=22, minute=0),  # After racing
+            CronTrigger(hour=23, minute=45),  # After racing (HV nights run to ~23:00)
             id="settle_bets",
             name="Settle bets for today",
         )
@@ -395,10 +395,14 @@ class Orchestrator:
             logger.debug("Results scrape: %s", e)
 
     def _job_settle_bets(self):
-        """Settle all bets for today's races."""
-        if not self._is_race_day():
-            return
+        """Settle any unsettled bets from recent meetings.
 
+        Runs daily (not gated on race day): HV Wednesday cards run to ~23:00, so
+        a same-day-only settle missed the last races, and on a non-race day the
+        old guard skipped them entirely — leaving them unsettled forever. We
+        re-scan the last 7 days; settle_race only touches still-unsettled bets,
+        so re-scanning is cheap and idempotent.
+        """
         logger.info("Settling bets...")
         try:
             from agents.predictor.pnl_tracker import PnLTracker
@@ -407,15 +411,20 @@ class Orchestrator:
             session = get_session()
             tracker = PnLTracker(session, self.settings.INITIAL_BANKROLL)
             today = hk_today()
+            cutoff = today - timedelta(days=7)
 
-            races = session.query(Race).filter_by(race_date=today).all()
+            races = (
+                session.query(Race)
+                .filter(Race.race_date >= cutoff, Race.race_date <= today)
+                .all()
+            )
             total_pnl = 0
 
             for race in races:
                 pnls = tracker.settle_race(race.id)
                 total_pnl += sum(pnls)
 
-            logger.info("Today's P&L: $%.2f", total_pnl)
+            logger.info("Settled P&L (last 7 days, newly settled): $%.2f", total_pnl)
 
             # Send meeting summary to Discord
             from discord_bot.webhook import DiscordWebhook
@@ -511,23 +520,26 @@ class Orchestrator:
             train_start = today - timedelta(days=730)
 
             # Train win model
-            model, metadata = trainer.train_win_model(train_start, today, self.settings.PRIMARY_MODEL)
-            if model:
-                version = trainer.save_model(model, metadata)
-                logger.info("Win model retrained: %s (AUC: %.4f)", version, metadata.get("validation_auc", 0))
+            win_model, win_meta = trainer.train_win_model(train_start, today, self.settings.PRIMARY_MODEL)
+            if win_model:
+                version = trainer.save_model(win_model, win_meta)
+                logger.info("Win model retrained: %s (AUC: %.4f)", version, win_meta.get("validation_auc", 0))
 
             # Train place model
-            model, metadata = trainer.train_place_model(train_start, today, self.settings.PRIMARY_MODEL)
-            if model:
-                version = trainer.save_model(model, metadata)
+            place_model, place_meta = trainer.train_place_model(train_start, today, self.settings.PRIMARY_MODEL)
+            if place_model:
+                version = trainer.save_model(place_model, place_meta)
                 logger.info("Place model retrained: %s", version)
 
-            # Notify
+            # Notify — report the WIN model's validation AUC (place_meta would
+            # otherwise shadow it and show the wrong number, or 0 if place
+            # training returned no metadata).
             from discord_bot.webhook import DiscordWebhook
             discord = DiscordWebhook()
+            win_auc = win_meta.get("validation_auc", 0) if win_model else 0
             discord.send_embed(
                 title="Model Retrained",
-                description=f"Monthly model refresh complete. AUC: {metadata.get('validation_auc', 0):.4f}",
+                description=f"Monthly model refresh complete. Win AUC: {win_auc:.4f}",
                 color=3447003,
             )
 

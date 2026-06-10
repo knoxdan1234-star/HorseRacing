@@ -139,15 +139,23 @@ class ResultsScraper:
         # so a request for today/future silently returns a prior meeting's
         # results. Reject when the page we landed on isn't the date we asked
         # for — otherwise stale results get stored under the wrong date.
-        landed = re.search(r"RaceDate=(\d{4})/(\d{2})/(\d{2})", resp.url)
-        if landed:
-            landed_date = date(int(landed.group(1)), int(landed.group(2)), int(landed.group(3)))
-            if landed_date != race_date:
-                logger.info(
-                    "Results for %s %s R%d redirected to %s (no results yet) — skipping",
-                    race_date, racecourse, race_no, landed_date,
-                )
-                return None
+        landed = re.search(r"racedate=(\d{4})/(\d{2})/(\d{2})", resp.url, re.IGNORECASE)
+        if not landed:
+            # Fail closed: if we can't confirm the landed date matches the
+            # request, don't trust the page (HKJC may have changed the URL
+            # scheme). Better to skip than to store mislabeled results.
+            logger.info(
+                "No RaceDate in results URL for %s %s R%d (%s) — skipping",
+                race_date, racecourse, race_no, resp.url,
+            )
+            return None
+        landed_date = date(int(landed.group(1)), int(landed.group(2)), int(landed.group(3)))
+        if landed_date != race_date:
+            logger.info(
+                "Results for %s %s R%d redirected to %s (no results yet) — skipping",
+                race_date, racecourse, race_no, landed_date,
+            )
+            return None
 
         soup = BeautifulSoup(resp.text, "lxml")
         return self._parse_race_page(soup, race_date, racecourse, race_no)
@@ -288,11 +296,14 @@ class ResultsScraper:
             ):
                 return None
 
-            # Handle DNF, WV (withdrawn), DSQ (disqualified)
+            # Handle DNF, WV (withdrawn), DSQ (disqualified), and dead heats:
+            # HKJC prints "1 DH"/"2DH" for dead-heat placings — strip the DH
+            # suffix so a dead-heat winner isn't misread as a non-finisher.
             finish_position = None
-            if position_text.isdigit():
-                finish_position = int(position_text)
-            elif position_text in ("WV", "DISQ", "DNF", "PU", "UR", "FE"):
+            pos_clean = re.sub(r"\s*DH$", "", position_text.upper()).strip()
+            if pos_clean.isdigit():
+                finish_position = int(pos_clean)
+            elif position_text.upper() in ("WV", "DISQ", "DNF", "PU", "UR", "FE"):
                 finish_position = 0  # 0 indicates did not finish / scratched
 
             horse_no_text = cells[1].get_text(strip=True)
