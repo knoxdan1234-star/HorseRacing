@@ -66,23 +66,26 @@ def race_table(session, model, feature_cols, fe, races):
     return rows
 
 
-def fit_blend(tables):
+def fit_blend(tables, l2=0.01):
     """Conditional-logit MLE: P_i ∝ exp(a*log(fund_i) + b*log(market_i)),
-    softmax within race. Returns (a, b)."""
+    softmax within race. Weights constrained non-negative with an L2 penalty so
+    the fit stays a genuine Benter blend (positive market weight) instead of
+    overfitting to large offsetting magnitudes. Returns (a, b)."""
     lf = [np.log(np.clip(t["fund"], EPS, 1)) for t in tables]
     lm = [np.log(np.clip(t["market"], EPS, 1)) for t in tables]
     won = [t["won"] for t in tables]
 
     def nll(w):
         a, b = w
-        total = 0.0
+        total = l2 * (a * a + b * b)
         for f, m, y in zip(lf, lm, won):
             p = _softmax(a * f + b * m)
             total -= np.log(p[y == 1] + EPS).sum()
         return total
 
-    res = minimize(nll, x0=np.array([1.0, 1.0]), method="Nelder-Mead",
-                   options={"xatol": 1e-3, "fatol": 1e-3, "maxiter": 2000})
+    res = minimize(nll, x0=np.array([0.5, 1.0]), method="L-BFGS-B",
+                   bounds=[(0.0, 10.0), (0.0, 10.0)],
+                   options={"maxiter": 2000})
     return float(res.x[0]), float(res.x[1])
 
 
@@ -129,18 +132,22 @@ def main():
     data_max = session.query(Race.race_date).order_by(Race.race_date.desc()).first()[0]
     eval_from = (date.fromisoformat(args.eval_from) if args.eval_from
                  else data_max - timedelta(days=90))
-    train_end = eval_from - timedelta(days=1)
-    train_start = train_end - timedelta(days=args.train_months * 30)
+    # Stage-2 must be fit on OUT-OF-SAMPLE ranker probs, so the ranker is trained
+    # strictly BEFORE the blend-fit window — otherwise in-sample (overfit) model
+    # probs make the blend wrongly trust the model over the market.
     fit_start = eval_from - timedelta(days=args.fit_days)
+    ranker_train_end = fit_start - timedelta(days=1)
+    train_start = ranker_train_end - timedelta(days=args.train_months * 30)
+    fit_end = eval_from - timedelta(days=1)
 
     print("\n=== TWO-STAGE BLEND BACKTEST ===")
-    print(f"Stage-1 train: {train_start} -> {train_end}")
-    print(f"Stage-2 fit:   {fit_start} -> {train_end}")
+    print(f"Stage-1 train: {train_start} -> {ranker_train_end}")
+    print(f"Stage-2 fit:   {fit_start} -> {fit_end}   (OOS for ranker)")
     print(f"Eval (OOS):    {eval_from} -> {data_max}")
     print(f"Filter: edge>={args.edge}, odds [{args.min_odds}, {args.max_odds}]")
 
     trainer = ModelTrainer(session)
-    model, _ = trainer.train_win_ranker(train_start, train_end)
+    model, _ = trainer.train_win_ranker(train_start, ranker_train_end)
     if model is None:
         print("Could not train ranker."); return
     feature_cols = FeatureEngineer.get_feature_columns()
@@ -151,7 +158,7 @@ def main():
                 .filter(Race.race_date >= a, Race.race_date <= b)
                 .order_by(Race.race_date, Race.race_no).all())
 
-    fit_tables = race_table(session, model, feature_cols, fe, races_between(fit_start, train_end))
+    fit_tables = race_table(session, model, feature_cols, fe, races_between(fit_start, fit_end))
     eval_tables = race_table(session, model, feature_cols, fe, races_between(eval_from, data_max))
     if not fit_tables or not eval_tables:
         print("Not enough data with odds to fit/eval."); return
