@@ -159,8 +159,10 @@ class FeatureEngineer:
         if runner.horse_id:
             horse_feats = self._compute_horse_history(runner.horse_id, race.race_date, race)
             features.update(horse_feats)
+            features.update(self._compute_speed_features(runner.horse_id, race.race_date))
         else:
             features.update(self._default_horse_history())
+            features.update(self._default_speed_features())
 
         # --- Jockey features ---
         if runner.jockey_id:
@@ -276,6 +278,49 @@ class FeatureEngineer:
             "distance_win_rate": 0.07,
             "track_win_rate": 0.07,
             "class_change": 0,
+        }
+
+    def _compute_speed_features(self, horse_id: int, before_date: date) -> dict:
+        """Per-horse speed-figure form from PAST runs only (no leakage).
+        last/best/avg figures plus a recent-vs-older trend."""
+        past = (
+            self.session.query(Runner.speed_figure)
+            .join(Race, Runner.race_id == Race.id)
+            .filter(
+                Runner.horse_id == horse_id,
+                Race.race_date < before_date,
+                Runner.scratched == False,
+                Runner.speed_figure.isnot(None),
+            )
+            .order_by(Race.race_date.desc())
+            .limit(10)
+            .all()
+        )
+        figs = [r.speed_figure for r in past]
+        if not figs:
+            return self._default_speed_features()
+
+        recent = figs[:6]
+        trend = 0.0
+        if len(figs) >= 4:
+            top3 = figs[:3]
+            older = figs[3:6]
+            trend = (sum(top3) / len(top3)) - (sum(older) / len(older))
+
+        return {
+            "last_speed_figure": figs[0],
+            "best_speed_figure": max(recent),
+            "avg_speed_figure": sum(recent) / len(recent),
+            "speed_trend": trend,
+        }
+
+    def _default_speed_features(self) -> dict:
+        # 0.0 = average performance (figures are deviations from par)
+        return {
+            "last_speed_figure": 0.0,
+            "best_speed_figure": 0.0,
+            "avg_speed_figure": 0.0,
+            "speed_trend": 0.0,
         }
 
     def _compute_jockey_stats(self, jockey_id: int, before_date: date) -> dict:
@@ -449,6 +494,8 @@ class FeatureEngineer:
             "horse_career_starts", "horse_win_rate", "horse_place_rate",
             "days_since_last_run", "distance_win_rate", "track_win_rate",
             "class_change",
+            # Speed figures
+            "last_speed_figure", "best_speed_figure", "avg_speed_figure", "speed_trend",
             # Jockey
             "jockey_season_win_rate", "jockey_season_rides", "jockey_recent_win_rate",
             # Trainer

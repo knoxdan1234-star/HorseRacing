@@ -136,6 +136,7 @@ class Runner(Base):
     finish_time: Mapped[str | None] = mapped_column(String(20))
     win_odds: Mapped[float | None] = mapped_column(Float)  # Final win odds
     running_positions: Mapped[str | None] = mapped_column(String(50))  # e.g. "3 3 2 1"
+    speed_figure: Mapped[float | None] = mapped_column(Float)  # par/going-normalized speed rating
     scratched: Mapped[bool] = mapped_column(Boolean, default=False)
 
     race: Mapped["Race"] = relationship(back_populates="runners")
