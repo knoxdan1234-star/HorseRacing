@@ -131,10 +131,12 @@ class FeatureEngineer:
         features["rating"] = runner.rating or 60
         features["rating_change"] = runner.rating_change or 0
         features["season_stakes"] = runner.season_stakes or 0.0
-        # Keep odds as-is (may be None pre-poll). Do NOT fabricate a value here:
-        # the model fills NaN with the column median at fit/predict time, and the
-        # betting code must refuse to price a bet when real odds are missing.
-        features["win_odds"] = runner.win_odds
+        # Keep odds as-is (may be missing pre-poll). Do NOT fabricate a value:
+        # the betting code must refuse to price a bet when real odds are missing.
+        # Use np.nan (a float), NOT None — an all-missing column of None becomes
+        # pandas dtype 'object', which XGBoost rejects; np.nan keeps it float64
+        # and XGBoost treats it as a missing value natively.
+        features["win_odds"] = runner.win_odds if runner.win_odds is not None else np.nan
         features["implied_probability"] = (
             1.0 / runner.win_odds if runner.win_odds and runner.win_odds > 0 else np.nan
         )
