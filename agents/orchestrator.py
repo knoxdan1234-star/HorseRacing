@@ -199,10 +199,18 @@ class Orchestrator:
             logger.debug("Not a race day, skipping racecard scrape")
             return
 
+        # Prefer the fixture calendar, but FALL BACK to trying both courses if
+        # the fixture lookup is empty/unparseable. The 2026 fixture page can
+        # fail to parse, and silently skipping a real meeting (as happened on
+        # 2026-06-21) is far worse than an empty scrape on a non-meeting Wed/Sun
+        # — the per-meeting cap (14) makes a blind attempt safe.
         courses = self._meetings_today()
         if not courses:
-            logger.info("No HKJC meeting today (%s) — skipping racecard scrape", hk_today())
-            return
+            logger.warning(
+                "Fixture lookup returned no meeting for %s — falling back to ST/HV",
+                hk_today(),
+            )
+            courses = ["ST", "HV"]
 
         logger.info("Scraping today's race card for %s...", courses)
         try:
