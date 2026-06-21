@@ -101,6 +101,14 @@ class Orchestrator:
             name="Scrape race results",
         )
 
+        # --- Race day: Readiness check (alert if pipeline isn't ready) ---
+        self.scheduler.add_job(
+            self._job_readiness_check,
+            CronTrigger(day_of_week="wed,sun", hour=11, minute=30),
+            id="readiness_check",
+            name="Race-day readiness check",
+        )
+
         # --- Race day: Settle bets ---
         self.scheduler.add_job(
             self._job_settle_bets,
@@ -401,6 +409,20 @@ class Orchestrator:
             session.close()
         except Exception as e:
             logger.debug("Results scrape: %s", e)
+
+    def _job_readiness_check(self):
+        """Pre-race readiness check — pings Discord if the pipeline isn't ready
+        (missing card, runaway, stale page, no odds, no predictions, stuck
+        results) so a silent failure surfaces before post time."""
+        try:
+            from agents.monitor.readiness import RaceDayReadiness
+            from discord_bot.webhook import DiscordWebhook
+
+            session = get_session()
+            RaceDayReadiness(session).report(discord=DiscordWebhook())
+            session.close()
+        except Exception as e:
+            logger.error("Readiness check failed: %s", e)
 
     def _job_settle_bets(self):
         """Settle any unsettled bets from recent meetings.
