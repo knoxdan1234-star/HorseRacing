@@ -160,9 +160,11 @@ class FeatureEngineer:
             horse_feats = self._compute_horse_history(runner.horse_id, race.race_date, race)
             features.update(horse_feats)
             features.update(self._compute_speed_features(runner.horse_id, race.race_date))
+            features.update(self._compute_pace_features(runner.horse_id, race.race_date))
         else:
             features.update(self._default_horse_history())
             features.update(self._default_speed_features())
+            features.update(self._default_pace_features())
 
         # --- Jockey features ---
         if runner.jockey_id:
@@ -322,6 +324,53 @@ class FeatureEngineer:
             "avg_speed_figure": 0.0,
             "speed_trend": 0.0,
         }
+
+    @staticmethod
+    def _parse_running_positions(s: str | None) -> list[int]:
+        """'9971' -> [9,9,7,1] (position at each call; last ≈ finish)."""
+        if not s:
+            return []
+        return [int(ch) for ch in str(s) if ch.isdigit()]
+
+    def _compute_pace_features(self, horse_id: int, before_date: date) -> dict:
+        """Per-horse running style from PAST runs (leakage-safe): does it race on
+        the pace or come from behind, and how much ground does it make up?"""
+        past = (
+            self.session.query(Runner.running_positions)
+            .join(Race, Runner.race_id == Race.id)
+            .filter(
+                Runner.horse_id == horse_id,
+                Race.race_date < before_date,
+                Runner.scratched == False,
+                Runner.running_positions.isnot(None),
+                Runner.finish_position.isnot(None),
+                Runner.finish_position > 0,
+            )
+            .order_by(Race.race_date.desc())
+            .limit(10)
+            .all()
+        )
+        earlies, gains, front, n = [], [], 0, 0
+        for (rp,) in past:
+            pos = self._parse_running_positions(rp)
+            if len(pos) < 2:
+                continue
+            early, final = pos[0], pos[-1]
+            earlies.append(early)
+            gains.append(early - final)  # +ve = made up ground (closer)
+            if early <= 2:
+                front += 1
+            n += 1
+        if n == 0:
+            return self._default_pace_features()
+        return {
+            "avg_early_position": sum(earlies) / len(earlies),
+            "avg_pos_gain": sum(gains) / len(gains),
+            "front_runner_rate": front / n,
+        }
+
+    def _default_pace_features(self) -> dict:
+        return {"avg_early_position": 6.0, "avg_pos_gain": 0.0, "front_runner_rate": 0.0}
 
     def _compute_jockey_stats(self, jockey_id: int, before_date: date) -> dict:
         """Compute jockey statistics from past 6 months."""
@@ -496,6 +545,8 @@ class FeatureEngineer:
             "class_change",
             # Speed figures
             "last_speed_figure", "best_speed_figure", "avg_speed_figure", "speed_trend",
+            # Pace / running style
+            "avg_early_position", "avg_pos_gain", "front_runner_rate",
             # Jockey
             "jockey_season_win_rate", "jockey_season_rides", "jockey_recent_win_rate",
             # Trainer
