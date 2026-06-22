@@ -94,6 +94,25 @@ def blend_prob(t, a, b):
     return _softmax(score)
 
 
+def simulate_toppick(tables, prob_key, a, b, min_odds, max_odds):
+    """Back the model's single highest-probability runner each race, if its odds
+    are in band. Tests whether the model's *selection* edge is monetizable."""
+    staked = pnl = hits = 0
+    for t in tables:
+        p = t["fund"] if prob_key == "fund" else blend_prob(t, a, b)
+        i = int(np.argmax(p))
+        if not (min_odds <= t["odds"][i] <= max_odds):
+            continue
+        staked += 1
+        if t["won"][i] == 1:
+            pnl += t["odds"][i] - 1
+            hits += 1
+        else:
+            pnl -= 1
+    roi = 100.0 * pnl / staked if staked else 0.0
+    return staked, hits, roi
+
+
 def simulate(tables, prob_key, a, b, edge, min_odds, max_odds, favourite=False):
     """Flat 1-unit stakes. Returns (n_bets, hits, roi_pct)."""
     staked = pnl = hits = 0
@@ -175,6 +194,10 @@ def main():
                                       args.min_odds, args.max_odds)),
         ("BLEND value", simulate(eval_tables, "blend", a, b, args.edge,
                                  args.min_odds, args.max_odds)),
+        ("MODEL TOP-PICK", simulate_toppick(eval_tables, "fund", a, b,
+                                            args.min_odds, args.max_odds)),
+        ("BLEND TOP-PICK", simulate_toppick(eval_tables, "blend", a, b,
+                                            args.min_odds, args.max_odds)),
     ]
     print(f"{'strategy':<20}{'bets':>7}{'hits':>7}{'hit%':>8}{'ROI%':>9}")
     for name, (n, h, roi) in rows:
