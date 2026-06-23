@@ -37,6 +37,16 @@ RANKER_PARAMS = dict(
 )
 
 
+ODDS_BANDS = [(2.5, 4.0), (4.0, 7.0), (7.0, 12.0), (12.0, 20.0)]
+
+
+def _band(o: float):
+    for lo, hi in ODDS_BANDS:
+        if lo <= o < hi:
+            return (lo, hi)
+    return None
+
+
 def month_windows(first: date, last: date):
     out = []
     y, m = first.year, first.month
@@ -61,8 +71,9 @@ def train_ranker(df, cols, median):
     return r
 
 
-def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds):
-    """Returns (model: (bets,hits,pnl), fav: (bets,hits,pnl))."""
+def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds, band_stats=None):
+    """Returns (model: (bets,hits,pnl), fav: (bets,hits,pnl)). If band_stats is
+    given, accumulates per-odds-band {band: [bets,hits,pnl]} for the model pick."""
     s = h = 0
     pnl = 0.0
     fs = fh = 0
@@ -80,10 +91,17 @@ def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds):
         i = int(np.argmax(scores))
         if min_odds <= odds[i] <= max_odds:
             s += 1
+            profit = (odds[i] - 1) if won[i] == 1 else -1
+            pnl += profit
             if won[i] == 1:
-                pnl += odds[i] - 1; h += 1
-            else:
-                pnl -= 1
+                h += 1
+            if band_stats is not None:
+                b = _band(odds[i])
+                if b is not None:
+                    st = band_stats[b]
+                    st[0] += 1
+                    st[1] += int(won[i] == 1)
+                    st[2] += profit
 
         f = int(np.argmin(odds))
         fs += 1
@@ -126,6 +144,9 @@ def main():
     first_eval = dmin + timedelta(days=args.train_months * 30)
     windows = [(ws, we) for ws, we in month_windows(first_eval, dmax)]
 
+    from collections import defaultdict
+    band_stats = defaultdict(lambda: [0, 0, 0.0])  # band -> [bets, hits, pnl]
+
     print(f"\n{'window':<12}{'bets':>6}{'hit%':>7}{'ROI%':>9}{'fav ROI%':>10}")
     rows = []
     for ws, we in windows:
@@ -139,7 +160,7 @@ def main():
         if ranker is None:
             continue
         (s, h, pnl), (fs, fh, fpnl) = simulate_window(ev, ranker, cols, median,
-                                                       args.min_odds, args.max_odds)
+                                                       args.min_odds, args.max_odds, band_stats)
         if s == 0:
             continue
         roi = 100 * pnl / s
@@ -168,7 +189,16 @@ def main():
           f"mean-of-windows {mean_roi:+.1f}%")
     print(f"MARKET FAV     : {tot_fav_bets} bets, overall ROI {100*tot_fav_pnl/tot_fav_bets:+.1f}%")
     print(f"Worst drawdown : {max_dd:.0f} units")
-    print("\n(positive overall ROI across many windows = a real, repeatable edge)")
+
+    print("\n=== MODEL TOP-PICK ROI BY ODDS BAND (betting-method lever) ===")
+    print(f"{'band':<12}{'bets':>7}{'hit%':>8}{'ROI%':>9}")
+    for lo, hi in ODDS_BANDS:
+        b, hh, pp = band_stats[(lo, hi)]
+        if b:
+            print(f"{f'{lo}-{hi}':<12}{b:>7}{100*hh/b:>7.1f}%{100*pp/b:>8.1f}%")
+        else:
+            print(f"{f'{lo}-{hi}':<12}{0:>7}{'-':>8}{'-':>9}")
+    print("\n(use the band(s) with positive ROI + enough bets to focus staking)")
 
 
 if __name__ == "__main__":
