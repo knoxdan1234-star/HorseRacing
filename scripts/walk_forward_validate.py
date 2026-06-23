@@ -27,7 +27,7 @@ import pandas as pd
 from agents.predictor.feature_engine import FeatureEngineer
 from config.logging_config import setup_logging
 from db.database import get_session
-from db.models import Race
+from db.models import Dividend, Race
 
 RANKER_PARAMS = dict(
     objective="lambdarank", metric="ndcg", ndcg_eval_at=[1, 3],
@@ -72,13 +72,17 @@ def train_ranker(df, cols, median):
     return r
 
 
-def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds, band_stats=None):
-    """Returns (model: (bets,hits,pnl), fav: (bets,hits,pnl)). If band_stats is
-    given, accumulates per-odds-band {band: [bets,hits,pnl]} for the model pick."""
+def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds,
+                    band_stats=None, pla_map=None):
+    """Returns (win: (bets,hits,pnl), fav: (bets,hits,pnl), place: (bets,hits,pnl)).
+    WIN and PLACE use the SAME selection (top pick, odds in band); WIN settles on
+    a 1st, PLACE settles top-3 via the PLA dividend (pla_map[(race_id,horse_no)])."""
     s = h = 0
     pnl = 0.0
     fs = fh = 0
     fpnl = 0.0
+    ps = ph = 0
+    ppnl = 0.0
     for _, g in df_eval.groupby("race_id"):
         g = g[g["finish_position"].notna() & (g["finish_position"] > 0)]
         if len(g) < 2:
@@ -86,7 +90,10 @@ def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds, band_stat
         odds = g["win_odds"].to_numpy(dtype=float)
         if not np.isfinite(odds).all() or (odds <= 1).any():
             continue
-        won = (g["finish_position"].to_numpy() == 1).astype(float)
+        fin = g["finish_position"].to_numpy()
+        won = (fin == 1).astype(float)
+        hno = g["horse_no"].to_numpy()
+        rid = int(g["race_id"].iloc[0])
 
         scores = ranker.predict(g[cols].fillna(median))
         i = int(np.argmax(scores))
@@ -103,6 +110,17 @@ def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds, band_stat
                     st[0] += 1
                     st[1] += int(won[i] == 1)
                     st[2] += profit
+            # PLACE on the same pick: top-3 pays the PLA dividend (per $10 unit)
+            if pla_map is not None:
+                ps += 1
+                if fin[i] <= 3:
+                    div = pla_map.get((rid, int(hno[i])))
+                    if div:
+                        ppnl += div / 10.0 - 1
+                        ph += 1
+                    # placed but no dividend row (rare) -> treat as break-even
+                else:
+                    ppnl -= 1
 
         f = int(np.argmin(odds))
         fs += 1
@@ -110,7 +128,7 @@ def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds, band_stat
             fpnl += odds[f] - 1; fh += 1
         else:
             fpnl -= 1
-    return (s, h, pnl), (fs, fh, fpnl)
+    return (s, h, pnl), (fs, fh, fpnl), (ps, ph, ppnl)
 
 
 def main():
@@ -151,8 +169,16 @@ def main():
     first_eval = dmin + timedelta(days=args.train_months * 30)
     windows = [(ws, we) for ws, we in month_windows(first_eval, dmax)]
 
+    # Place-dividend map: (race_id, horse_no) -> PLA payout per $10
+    pla_map = {}
+    for rid, combo, payout in (session.query(Dividend.race_id, Dividend.combination, Dividend.payout)
+                               .filter(Dividend.pool_type == "PLA").all()):
+        if combo and str(combo).isdigit():
+            pla_map[(rid, int(combo))] = payout
+
     from collections import defaultdict
     band_stats = defaultdict(lambda: [0, 0, 0.0])  # band -> [bets, hits, pnl]
+    place_tot = [0, 0, 0.0]  # bets, hits(top3), pnl
 
     print(f"\n{'window':<12}{'bets':>6}{'hit%':>7}{'ROI%':>9}{'fav ROI%':>10}")
     rows = []
@@ -166,8 +192,9 @@ def main():
         ranker = train_ranker(train, cols, median)
         if ranker is None:
             continue
-        (s, h, pnl), (fs, fh, fpnl) = simulate_window(ev, ranker, cols, median,
-                                                       args.min_odds, args.max_odds, band_stats)
+        (s, h, pnl), (fs, fh, fpnl), (ps, ph, ppnl) = simulate_window(
+            ev, ranker, cols, median, args.min_odds, args.max_odds, band_stats, pla_map)
+        place_tot[0] += ps; place_tot[1] += ph; place_tot[2] += ppnl
         if s == 0:
             continue
         roi = 100 * pnl / s
@@ -192,8 +219,12 @@ def main():
 
     print("\n=== AGGREGATE ===")
     print(f"Windows: {len(rows)}   model beats favourite in {beats}/{len(rows)}")
-    print(f"MODEL TOP-PICK : {tot_bets} bets, overall ROI {100*tot_pnl/tot_bets:+.1f}%, "
+    print(f"MODEL TOP-PICK (WIN)  : {tot_bets} bets, overall ROI {100*tot_pnl/tot_bets:+.1f}%, "
           f"mean-of-windows {mean_roi:+.1f}%")
+    if place_tot[0]:
+        pb, ph, ppnl = place_tot
+        print(f"MODEL TOP-PICK (PLACE): {pb} bets, overall ROI {100*ppnl/pb:+.1f}%, "
+              f"top-3 hit {100*ph/pb:.1f}%")
     print(f"MARKET FAV     : {tot_fav_bets} bets, overall ROI {100*tot_fav_pnl/tot_fav_bets:+.1f}%")
     print(f"Worst drawdown : {max_dd:.0f} units")
 
