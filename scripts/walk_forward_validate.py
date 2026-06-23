@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 import lightgbm as lgb
 import numpy as np
+import pandas as pd
 
 from agents.predictor.feature_engine import FeatureEngineer
 from config.logging_config import setup_logging
@@ -133,13 +134,19 @@ def main():
     print("\n=== WALK-FORWARD VALIDATION (MODEL TOP-PICK) ===")
     print(f"Data: {dmin} -> {dmax} | train window {args.train_months}m | "
           f"odds [{args.min_odds}, {args.max_odds}]")
-    print("Building features once for the whole history (slow)...")
-    full = fe.build_features_for_date_range(dmin, dmax)
-    if full.empty:
-        print("No features built."); return
-
-    rid_to_date = {r.id: r.race_date for r in session.query(Race.id, Race.race_date).all()}
-    full["race_date"] = full["race_id"].map(rid_to_date)
+    cache = ROOT / f"data/.wf_features_{dmin}_{dmax}.pkl"
+    if cache.exists():
+        print(f"Loading cached features from {cache.name} (skipping the slow build)...")
+        full = pd.read_pickle(cache)
+    else:
+        print("Building features once for the whole history (slow; cached after)...")
+        full = fe.build_features_for_date_range(dmin, dmax)
+        if full.empty:
+            print("No features built."); return
+        rid_to_date = {r.id: r.race_date for r in session.query(Race.id, Race.race_date).all()}
+        full["race_date"] = full["race_id"].map(rid_to_date)
+        full.to_pickle(cache)
+        print(f"Cached features to {cache.name} — future runs load instantly.")
 
     first_eval = dmin + timedelta(days=args.train_months * 30)
     windows = [(ws, we) for ws, we in month_windows(first_eval, dmax)]
