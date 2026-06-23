@@ -32,7 +32,8 @@ RANKER_PARAMS = dict(
     objective="lambdarank", metric="ndcg", ndcg_eval_at=[1, 3],
     n_estimators=500, learning_rate=0.05, num_leaves=63, max_depth=8,
     min_child_samples=50, subsample=0.8, colsample_bytree=0.8,
-    reg_alpha=0.1, reg_lambda=1.0, verbose=-1, n_jobs=-1, random_state=42,
+    reg_alpha=0.1, reg_lambda=1.0, verbose=-1,
+    n_jobs=4, random_state=42,  # capped so a run can't oversubscribe all cores
 )
 
 
@@ -96,6 +97,7 @@ def simulate_window(df_eval, ranker, cols, median, min_odds, max_odds):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--train-months", type=int, default=18)
+    ap.add_argument("--since", help="only build/validate from this date (YYYY-MM-DD) to limit cost")
     ap.add_argument("--min-odds", type=float, default=2.5)
     ap.add_argument("--max-odds", type=float, default=20.0)
     args = ap.parse_args()
@@ -105,8 +107,10 @@ def main():
     cols = FeatureEngineer.get_feature_columns()
     fe = FeatureEngineer(session)
 
-    dmin = session.query(Race.race_date).order_by(Race.race_date.asc()).first()[0]
     dmax = session.query(Race.race_date).order_by(Race.race_date.desc()).first()[0]
+    dmin = session.query(Race.race_date).order_by(Race.race_date.asc()).first()[0]
+    if args.since:
+        dmin = max(dmin, date.fromisoformat(args.since))
 
     print("\n=== WALK-FORWARD VALIDATION (MODEL TOP-PICK) ===")
     print(f"Data: {dmin} -> {dmax} | train window {args.train_months}m | "
