@@ -117,6 +117,14 @@ class Orchestrator:
             name="Settle bets for today",
         )
 
+        # --- Nightly: Refresh speed figures for newly-resulted runs ---
+        self.scheduler.add_job(
+            self._job_refresh_speed_figures,
+            CronTrigger(hour=23, minute=55),  # after settle, once results are in
+            id="refresh_speed_figures",
+            name="Refresh speed figures for new results",
+        )
+
         # --- Every Monday 10AM: Send weekly P&L ---
         self.scheduler.add_job(
             self._job_weekly_pnl,
@@ -409,6 +417,38 @@ class Orchestrator:
             session.close()
         except Exception as e:
             logger.debug("Results scrape: %s", e)
+
+    def _job_refresh_speed_figures(self):
+        """Compute speed figures for newly-resulted runs (incremental) so the
+        model doesn't go stale on recent form. Only fills runners missing a
+        figure; a no-op on days with no new results."""
+        try:
+            from agents.predictor.speed_figure import SpeedFigureCalculator
+            from db.models import Race, Runner
+
+            session = get_session()
+            calc = SpeedFigureCalculator(session)
+            pending = (
+                session.query(Runner)
+                .join(Race, Runner.race_id == Race.id)
+                .filter(
+                    Runner.finish_time.isnot(None),
+                    Runner.speed_figure.is_(None),
+                    Race.distance.isnot(None),
+                )
+                .all()
+            )
+            n = 0
+            for r in pending:
+                fig = calc.figure(r.finish_time, r.race.distance, r.race.going)
+                if fig is not None:
+                    r.speed_figure = fig
+                    n += 1
+            session.commit()
+            logger.info("Speed-figure refresh: updated %d new runs", n)
+            session.close()
+        except Exception as e:
+            logger.error("Speed-figure refresh failed: %s", e)
 
     def _job_readiness_check(self):
         """Pre-race readiness check — pings Discord if the pipeline isn't ready
