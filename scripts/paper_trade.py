@@ -1,10 +1,11 @@
 """
-Paper-trade the Class-4 + Exp-1 ranker strategy.
+Paper-trade the mid-odds top-pick strategy.
 
-This is the strategy validated by the May 2026 walk-forward analysis:
-  ranker (LambdaRank), edge=5%, Kelly=1%, odds [2.5,20], top-3, Class 4 only.
-Out-of-sample Jan 2025 - Apr 2026: 28 bets, +46.9% ROI on a model trained
-without seeing those races.
+Strategy (2026-06): back the LambdaRank model's single TOP pick to WIN, only
+when its odds are in the mid band [4, 12] — where walk-forward validation found
+the edge (favourites have no value; longshots bleed). Flat 1%-of-bankroll
+stakes. This is the FORWARD test of that strategy — paper only until it proves
+out live, given high variance and that the band was partly chosen in-sample.
 
 Modes:
   predict --date YYYY-MM-DD     Generate paper bets for that day's Class 4 races.
@@ -41,13 +42,18 @@ LEDGER_PATH = ROOT / "output" / "paper_trades" / "ledger.jsonl"
 TRAIN_WINDOW_MONTHS = 24
 INITIAL_BANKROLL = 10000.0
 
-# Exp-1 strategy parameters (the validated config)
-EDGE_MARGIN = 0.05
-KELLY_FRACTION = 0.01
-MIN_ODDS = 2.5
-MAX_ODDS = 20.0
-TOP_RANK = 3
+# Strategy (2026-06): back the model's single TOP pick, WIN, only when its odds
+# are in the mid band 4-12 — where walk-forward validation showed the edge
+# (favourites have no value, longshots bleed). Flat stakes: the edge is in
+# selection, not per-bet value, so Kelly (which needs prob>market) would wrongly
+# skip most picks. Conservative flat fraction given the high variance.
+MIN_ODDS = 4.0
+MAX_ODDS = 12.0
+FLAT_STAKE_PCT = 0.01     # 1% of bankroll per bet
+MAX_BET_PCT = 0.02        # hard cap
+MIN_BET = 10.0            # HKJC minimum unit
 TARGET_CLASS = "Class 4"
+KELLY_FRACTION = 0.01     # retained for the BetSizer ctor; sizing is flat below
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +119,7 @@ def _discord_signal_embed(target: date, bets: list[PaperBet], bankroll: float) -
         "title": f"📋 紙上投注訊號 — {target}",
         "description": (
             f"⚠️ **紙上模式 (PAPER) — 不要實際下注**\n"
-            f"策略: Class 4 + Ranker + Exp-1 (edge≥5%, Kelly 1%, 賠率 2.5-20)\n"
+            f"策略: 模型首選馬 獨贏 (WIN), 只限賠率 4-12, 平注 1%\n"
             f"今日訊號: {len(bets)} 注 | 總注額: HK${total_stake:,.0f} | 目前本金: HK${bankroll:,.2f}"
         ),
         "fields": lines,
@@ -189,67 +195,63 @@ def predict_for_date(target: date) -> int:
 
     n_placed = 0
     placed_bets: list[PaperBet] = []
+    flat_stake = max(MIN_BET, round(bankroll * FLAT_STAKE_PCT / 10) * 10)
+    flat_stake = min(flat_stake, round(bankroll * MAX_BET_PCT / 10) * 10)
+
     for race in races:
         df = fe.build_features_for_race(race.id)
         if df.empty:
             continue
         X = df[feature_cols].copy().fillna(df[feature_cols].median())
         scores = model.predict(X)
-        exp_s = np.exp(scores - scores.max())
-        win_probs = exp_s / exp_s.sum()
-        ranked = np.argsort(-win_probs)
-        top_set = set(ranked[:TOP_RANK])
+        win_probs = np.exp(scores - scores.max())
+        win_probs /= win_probs.sum()
 
-        for i, (_, row) in enumerate(df.iterrows()):
-            if i not in top_set:
-                continue
-            # Require real live odds — never price a bet off a fabricated value.
-            wo = row.get("win_odds")
-            if wo is None or wo != wo or float(wo) <= 0:  # None / NaN / nonpositive
-                continue
-            win_odds = float(wo)
-            if win_odds < MIN_ODDS or win_odds > MAX_ODDS:
-                continue
-            horse_no = int(row["horse_no"])
-            if (race.id, horse_no) in already_bet:
-                continue  # already staked this runner — don't double-bet
-            model_prob = float(win_probs[i])
-            implied = 1.0 / win_odds
-            if model_prob <= implied * (1 + EDGE_MARGIN):
-                continue
-            bet_amount = sizer.size_bet(model_prob, win_odds, "WIN")
-            if bet_amount <= 0:
-                continue
+        # The model's single top pick only.
+        top = int(np.argmax(win_probs))
+        row = df.iloc[top]
 
-            runner = (
-                session.query(Runner)
-                .filter_by(race_id=race.id, horse_no=horse_no)
-                .first()
-            )
-            horse_name = runner.horse_name if runner and runner.horse_name else f"#{horse_no}"
+        # Require real live odds — never bet off a fabricated value.
+        wo = row.get("win_odds")
+        if wo is None or wo != wo or float(wo) <= 0:  # None / NaN / nonpositive
+            continue
+        win_odds = float(wo)
+        if not (MIN_ODDS <= win_odds <= MAX_ODDS):  # mid-odds band only
+            continue
+        horse_no = int(row["horse_no"])
+        if (race.id, horse_no) in already_bet:
+            continue  # already staked this runner — don't double-bet
 
-            bet = PaperBet(
-                placed_at=datetime.now().isoformat(timespec="seconds"),
-                race_date=str(race.race_date),
-                race_id=race.id,
-                racecourse=race.racecourse or "?",
-                race_no=race.race_no,
-                distance=race.distance or 0,
-                race_class=race.race_class or "?",
-                horse_no=horse_no,
-                horse_name=horse_name,
-                model_prob=round(model_prob, 4),
-                win_odds=win_odds,
-                bet_amount=bet_amount,
-            )
-            append_ledger(bet)
-            placed_bets.append(bet)
-            n_placed += 1
-            logger.info(
-                "PAPER BET %s R%d #%d %s @%.1f $%.0f (prob=%.3f)",
-                race.racecourse, race.race_no, horse_no, horse_name,
-                win_odds, bet_amount, model_prob,
-            )
+        model_prob = float(win_probs[top])
+        runner = (
+            session.query(Runner)
+            .filter_by(race_id=race.id, horse_no=horse_no)
+            .first()
+        )
+        horse_name = runner.horse_name if runner and runner.horse_name else f"#{horse_no}"
+
+        bet = PaperBet(
+            placed_at=datetime.now().isoformat(timespec="seconds"),
+            race_date=str(race.race_date),
+            race_id=race.id,
+            racecourse=race.racecourse or "?",
+            race_no=race.race_no,
+            distance=race.distance or 0,
+            race_class=race.race_class or "?",
+            horse_no=horse_no,
+            horse_name=horse_name,
+            model_prob=round(model_prob, 4),
+            win_odds=win_odds,
+            bet_amount=flat_stake,
+        )
+        append_ledger(bet)
+        placed_bets.append(bet)
+        n_placed += 1
+        logger.info(
+            "PAPER BET %s R%d #%d %s @%.1f $%.0f (top pick, prob=%.3f)",
+            race.racecourse, race.race_no, horse_no, horse_name,
+            win_odds, flat_stake, model_prob,
+        )
     session.close()
 
     # Discord signal
@@ -355,7 +357,7 @@ def summary():
     bankroll = INITIAL_BANKROLL + total_pnl
 
     print(f"\n=== PAPER TRADING LEDGER ({LEDGER_PATH.relative_to(ROOT)}) ===")
-    print(f"Strategy: ranker + Class 4 + Exp-1 (edge=5%, Kelly=1%, odds [2.5,20], top-3)")
+    print(f"Strategy: ranker top-pick, WIN, odds [4,12], flat 1% (speed+pace model)")
     print(f"Initial bankroll:      ${INITIAL_BANKROLL:,.2f}")
     print(f"Bets placed:           {len(ledger)}")
     print(f"Bets settled:          {n}")
